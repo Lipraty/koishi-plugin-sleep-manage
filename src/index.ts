@@ -1,6 +1,5 @@
 import { Context, Schema, Session } from 'koishi'
 import moment from 'moment'
-import { StringDecoder } from 'string_decoder'
 
 declare module 'koishi' {
   interface User {
@@ -61,7 +60,6 @@ export function apply(ctx: Context, config: Config) {
     let period: string = '早安'
     let action: string = '起床'
     let condition: string = '睡眠'
-console.log(toDay)
     if (toDay !== new Date().getDay()) {
       toDay = new Date().getDay()
       morningRank = 0
@@ -95,8 +93,4 @@ console.log(toDay)
       session.user.lastGreetingTime = nowTime
     }
   })
-
-  const parseTime = (time: string) => {
-    return new Date('2023-01-01 ' + time).getTime()
-  }
 }
