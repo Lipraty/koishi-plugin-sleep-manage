@@ -1,7 +1,7 @@
 {
   "name": "koishi-plugin-sleep-manage",
   "description": "show show your sleep!",
-  "version": "0.0.1-placeholder",
+  "version": "0.0.1",
   "main": "lib/index.js",
   "typings": "lib/index.d.ts",
   "files": [
@@ -12,7 +12,7 @@
   "scripts": {},
   "koishi": {
     "description": {
-      "zh": "让我康康你的睡眠"
+      "zh": "早安喵！晚安喵~"
     },
     "service": {
       "required": [
@@ -23,10 +23,12 @@
   "keywords": [
     "chatbot",
     "koishi",
-    "plugin",
-    "market:hidden"
+    "plugin"
   ],
   "peerDependencies": {
     "koishi": "^4.11.0"
+  },
+  "dependencies": {
+    "moment": "^2.29.4"
   }
 }
