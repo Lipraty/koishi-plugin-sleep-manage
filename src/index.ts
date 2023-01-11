@@ -1,27 +1,51 @@
 import { Context, Schema, Session } from 'koishi'
-import moment from 'moment'
 
 declare module 'koishi' {
   interface User {
     lastGreetingTime: number
+    greetingChannels: string[]
   }
 }
-
+//#region plugin configs
 export const name = 'sleep-manage'
 
 export const using = ['database']
 
 export const usage = `
+<style>
+@keyframes rot {
+  0% {
+    transform: rotateZ(0deg);
+  }
+  100% {
+    transform: rotateZ(360deg);
+  }
+}
+
+.rotationStar {
+  display: inline-block;
+  animation: rot 3.5s linear infinite;
+  opacity: 1;
+  transition: 1.5s cubic-bezier(0.4, 0, 1, 1);
+}
+.rotationStar:hover {
+  opacity: 0;
+  transition: 0.35s cubic-bezier(0.4, 0, 1, 1);
+}
+</style>
+
 ## 插件说明
 
 主人好喵~ 
 
 请注意下列时间设置是24小时制哦
 
-然后没有什么要说明的了~
+然后没有什么要说明的了~<span class="rotationStar">⭐</span>
 `
 
 export interface Config {
+  interval: number
+  petPhrase: string
   morningStart: number
   morningEnd: number
   eveningStart: number
@@ -29,68 +53,62 @@ export interface Config {
 }
 
 export const Config: Schema<Config> = Schema.object({
+  interval: Schema.number().min(0).max(24).default(5).description('在这个时长内都是重复的喵'),
+  petPhrase: Schema.string().default('喵').description('想要人家怎么说 DA⭐ZE~'),
   morningStart: Schema.number().min(0).max(24).default(6).description('早安 响应时间范围开始喵'),
   morningEnd: Schema.number().min(0).max(24).default(12).description('早安 响应时间范围结束喵'),
   eveningStart: Schema.number().min(0).max(24).default(21).description('晚安 响应时间范围开始喵'),
   eveningEnd: Schema.number().min(0).max(24).default(3).description('晚安 响应时间范围结束喵'),
 })
-
+//#endregion
 export function apply(ctx: Context, config: Config) {
-  // 1 = morning, 2 = night
-  let contentTag: 0 | 1 | 2 = 0
-  let morningRank: number = 0
-  let eveningRank: number = 0
-  let toDay: number = new Date().getDate()
+  const fmtTime = (time: Date) => [time.getHours(), time.getMinutes(), time.getSeconds()].map(v => v.toString().length === 2 ? v : '0' + v).join(':')
+
+  ctx.i18n.define('zh', require('./locales/zh-cn'))
 
   ctx.model.extend('user', {
-    lastGreetingTime: 'integer'
+    lastGreetingTime: 'integer',
+    greetingChannels: 'list'
   })
 
   ctx.before('attach-user', (session, filters) => {
     filters.add('lastGreetingTime')
+    filters.add('greetingChannels')
   })
 
-  ctx.middleware(async (session: Session<'id' | 'lastGreetingTime'>, next) => {
-    const morning = ['早', '早安']
-    const night = ['晚', '晚安']
-    const content: string = session.content
+  ctx.middleware(async (session: Session<'id' | 'lastGreetingTime' | 'greetingChannels'>, next) => {
+    const content = session.content
     const nowTime = new Date().getTime()
-    const nowHour: number = new Date(nowTime).getHours()
+    const oldTime = session.user.lastGreetingTime
+    const nowHour = new Date(nowTime).getHours()
+    const greetTime = fmtTime(new Date(nowTime - oldTime)).split(':')
+    let peiod: 'morning' | 'evening'
+    let tag
 
-    let period: string = '早安'
-    let action: string = '起床'
-    let condition: string = '睡眠'
-    if (toDay !== new Date().getDay()) {
-      toDay = new Date().getDay()
-      morningRank = 0
-      eveningRank = 0
-    }
+    if (['早', '早安'].includes(content) && (nowHour >= config.morningStart && nowHour <= config.morningEnd)) peiod = 'morning'
 
-    if (morning.includes(content) && (nowHour >= config.morningStart && nowHour <= config.morningEnd)) {
-      morningRank++
-      period = '早安'
-      action = '起床'
-      condition = '睡眠'
-      contentTag = 1
-    }
+    if (['晚', '晚安'].includes(content) && (nowHour >= config.eveningStart || nowHour <= config.eveningEnd)) peiod = 'evening'
 
-    if (night.includes(content) && (nowHour >= config.eveningStart || nowHour <= config.eveningEnd)) {
-      eveningRank++
-      period = '晚安'
-      action = '入睡'
-      condition = '清醒'
-      contentTag = 2
-    }
+    if (oldTime) {
+      if (nowHour - new Date(oldTime).getHours() < config.interval)
+        tag = 'repleated'
+      else
+        tag = 'private'
+      // else if (session.subtype === 'private')
+      //   tag = 'private'
+      // else if (session.subtype !== 'private')
+      //   tag = 'channel'
+    } else tag = 'frist'
 
-    if (contentTag > 0) {
-      if (session.user.lastGreetingTime) {
-        const duration = moment(new Date(nowTime - session.user.lastGreetingTime)).format('HH:mm:ss').split(':').map(v => +v)
-        await session.send(`${period}喵！你的${condition}时长为${duration[0]}时${duration[1]}分${duration[2]}秒~\n${session.subtype === 'private' ? '' : '你是今天第' + (contentTag === 1 ? morningRank : eveningRank) + '个' + action + '的哦！'}`)
-      } else {
-        await session.send(`${period}喵！由于是第一次记录，就不计算时间啦~\n${session.subtype === 'private' ? '' : '你是今天第' + (contentTag === 1 ? morningRank : eveningRank) + '个' + action + '的哦！'}`)
-      }
-      contentTag = 0
+    if (peiod === 'evening')
+      if (tag === 'repleated')
+        tag += '.frist'
+
+    if (peiod) {
       session.user.lastGreetingTime = nowTime
+      return session.text(`sleep.${peiod}.${tag}`, [config.petPhrase, greetTime[0], greetTime[1], greetTime[2]])
+    } else {
+      return next()
     }
   })
 }
