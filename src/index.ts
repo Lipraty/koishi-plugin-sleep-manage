@@ -3,9 +3,16 @@ import { Context, Schema, Session } from 'koishi'
 declare module 'koishi' {
   interface User {
     lastGreetingTime: number
+    eveningCount: number
     greetingChannels: string[]
   }
+
+  interface Channel {
+    eveningRank: string[]
+    morningRank: string[]
+  }
 }
+
 //#region plugin configs
 export const name = 'sleep-manage'
 
@@ -36,7 +43,7 @@ export const usage = `
 
 ## 插件说明
 
-主人好喵~ 
+主人好喵~ 你可以在我存在的任何地方跟我说“早安”或“晚安”来记录你的作息哦~
 
 请注意下列时间设置是24小时制哦
 
@@ -45,6 +52,7 @@ export const usage = `
 
 export interface Config {
   interval: number
+  manyEvening: number
   petPhrase: string
   morningStart: number
   morningEnd: number
@@ -53,7 +61,8 @@ export interface Config {
 }
 
 export const Config: Schema<Config> = Schema.object({
-  interval: Schema.number().min(0).max(24).default(5).description('在这个时长内都是重复的喵'),
+  interval: Schema.number().min(0).max(12).default(3).description('在这个时长内都是重复的喵'),
+  manyEvening: Schema.number().min(3).max(114514).default(3).description('真的重复晚安太多了喵，要骂人了喵！'),
   petPhrase: Schema.string().default('喵').description('想要人家怎么说 DA⭐ZE~'),
   morningStart: Schema.number().min(0).max(24).default(6).description('早安 响应时间范围开始喵'),
   morningEnd: Schema.number().min(0).max(24).default(12).description('早安 响应时间范围结束喵'),
@@ -67,33 +76,39 @@ export function apply(ctx: Context, config: Config) {
   ctx.i18n.define('zh', require('./locales/zh-cn'))
 
   ctx.model.extend('user', {
-    lastGreetingTime: 'integer',
+    eveningCount: 'integer(3)',
+    lastGreetingTime: 'integer(14)',
     greetingChannels: 'list'
   })
 
   ctx.before('attach-user', (session, filters) => {
     filters.add('lastGreetingTime')
     filters.add('greetingChannels')
+    filters.add('eveningCount')
   })
 
-  ctx.middleware(async (session: Session<'id' | 'lastGreetingTime' | 'greetingChannels'>, next) => {
+  ctx.middleware(async (session: Session<'id' | 'lastGreetingTime' | 'greetingChannels' | 'eveningCount'>, next) => {
     const content = session.content
     const nowTime = new Date().getTime()
     const oldTime = session.user.lastGreetingTime
     const nowHour = new Date(nowTime).getHours()
     const greetTime = fmtTime(new Date(nowTime - oldTime)).split(':')
     let peiod: 'morning' | 'evening'
-    let tag
+    let tag: string
 
     if (['早', '早安'].includes(content) && (nowHour >= config.morningStart && nowHour <= config.morningEnd)) peiod = 'morning'
 
     if (['晚', '晚安'].includes(content) && (nowHour >= config.eveningStart || nowHour <= config.eveningEnd)) peiod = 'evening'
 
     if (oldTime) {
-      if (nowHour - new Date(oldTime).getHours() < config.interval)
+      if (nowHour - new Date(oldTime).getHours() < config.interval) {
         tag = 'repleated'
-      else
+        if (peiod === 'evening')
+          session.user.eveningCount++
+      } else {
+        session.user.eveningCount = 0
         tag = 'private'
+      }
       // else if (session.subtype === 'private')
       //   tag = 'private'
       // else if (session.subtype !== 'private')
@@ -101,12 +116,14 @@ export function apply(ctx: Context, config: Config) {
     } else tag = 'frist'
 
     if (peiod === 'evening')
-      if (tag === 'repleated')
+      if (tag === 'repleated' && session.user.eveningCount <= config.manyEvening)
         tag += '.frist'
+      else if (tag === 'repleated' && session.user.eveningCount > config.manyEvening)
+        tag += '.many'
 
     if (peiod) {
       session.user.lastGreetingTime = nowTime
-      return session.text(`sleep.${peiod}.${tag}`, [config.petPhrase, greetTime[0], greetTime[1], greetTime[2]])
+      return session.text(`sleep.${peiod}.${tag}`, [config.petPhrase, greetTime[0], greetTime[1], greetTime[2], 0,session.user.eveningCount])
     } else {
       return next()
     }
