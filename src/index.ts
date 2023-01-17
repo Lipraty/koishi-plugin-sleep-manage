@@ -1,93 +1,21 @@
 import { Context, Schema, Session } from 'koishi'
 
-declare module 'koishi' {
-  interface User {
-    lastGreetingTime: number
-    eveningCount: number
-    greetingChannels: string[]
-  }
-
-  interface Channel {
-    eveningRank: string[]
-    morningRank: string[]
-  }
-}
-
-//#region plugin configs
 export const name = 'sleep-manage'
 
 export const using = ['database']
 
-export const usage = `
-<style>
-@keyframes rot {
-  0% {
-    transform: rotateZ(0deg);
-  }
-  100% {
-    transform: rotateZ(360deg);
-  }
-}
-
-.rotationStar {
-  display: inline-block;
-  animation: rot 3.5s linear infinite;
-  opacity: 1;
-  transition: 1.5s cubic-bezier(0.4, 0, 1, 1);
-}
-.rotationStar:hover {
-  opacity: 0;
-  transition: 0.35s cubic-bezier(0.4, 0, 1, 1);
-}
-</style>
-
-## 插件说明
-
-主人好喵~ 你可以在我存在的任何地方跟我说“早安”或“晚安”来记录你的作息哦~
-
-请注意下列时间设置是24小时制哦
-
-然后没有什么要说明的了~<span class="rotationStar">⭐</span>
-`
-
-export interface Config {
-  interval: number
-  manyEvening: number
-  petPhrase: string
-  morningStart: number
-  morningEnd: number
-  eveningStart: number
-  eveningEnd: number
-}
-
-export const Config: Schema<Config> = Schema.object({
-  interval: Schema.number().min(0).max(12).default(3).description('在这个时长内都是重复的喵'),
-  manyEvening: Schema.number().min(3).max(114514).default(3).description('真的重复晚安太多了喵，要骂人了喵！'),
-  petPhrase: Schema.string().default('喵').description('想要人家怎么说 DA⭐ZE~'),
-  morningStart: Schema.number().min(0).max(24).default(6).description('早安 响应时间范围开始喵'),
-  morningEnd: Schema.number().min(0).max(24).default(12).description('早安 响应时间范围结束喵'),
-  eveningStart: Schema.number().min(0).max(24).default(21).description('晚安 响应时间范围开始喵'),
-  eveningEnd: Schema.number().min(0).max(24).default(3).description('晚安 响应时间范围结束喵'),
-})
 //#endregion
 export function apply(ctx: Context, config: Config) {
   const fmtTime = (time: Date) => [time.getHours(), time.getMinutes(), time.getSeconds()].map(v => v.toString().length === 2 ? v : '0' + v).join(':')
 
   ctx.i18n.define('zh', require('./locales/zh-cn'))
 
-  ctx.model.extend('user', {
-    eveningCount: 'integer(3)',
-    lastGreetingTime: 'integer(14)',
-    greetingChannels: 'list'
-  })
-
   ctx.before('attach-user', (session, filters) => {
     filters.add('lastGreetingTime')
-    filters.add('greetingChannels')
     filters.add('eveningCount')
   })
 
-  ctx.middleware(async (session: Session<'id' | 'lastGreetingTime' | 'greetingChannels' | 'eveningCount'>, next) => {
+  ctx.middleware(async (session: Session<'id' | 'lastGreetingTime' | 'eveningCount'>, next) => {
     const content = session.content
     const nowTime = new Date().getTime()
     const oldTime = session.user.lastGreetingTime
@@ -123,9 +51,65 @@ export function apply(ctx: Context, config: Config) {
 
     if (peiod) {
       session.user.lastGreetingTime = nowTime
-      return session.text(`sleep.${peiod}.${tag}`, [config.petPhrase, greetTime[0], greetTime[1], greetTime[2], 0,session.user.eveningCount])
+      return session.text(`sleep.${peiod}.${tag}`, [config.petPhrase, greetTime[0], greetTime[1], greetTime[2], 0, session.user.eveningCount])
     } else {
       return next()
     }
   })
 }
+
+//#region plugin configs
+export const usage = `
+<style>
+@keyframes rot {
+  0% {
+    transform: rotateZ(0deg);
+  }
+  100% {
+    transform: rotateZ(360deg);
+  }
+}
+
+.rotationStar {
+  display: inline-block;
+  animation: rot 3.5s linear infinite;
+  opacity: 1;
+  transition: 1.5s cubic-bezier(0.4, 0, 1, 1);
+}
+.rotationStar:hover {
+  opacity: 0;
+  transition: 0.35s cubic-bezier(0.4, 0, 1, 1);
+}
+</style>
+
+## 插件说明喵
+
+> 由于 0.2 完全重写了数据库的代码，如果主人是从 0.1.x 版本升级上来的，可能会遇到一些问题哦！
+
+主人好喵~ 你可以在我存在的任何地方跟我说“早安”或“晚安”来记录你的作息哦~
+
+请注意下列时间设置是24小时制哦
+
+然后没有什么要说明的了~<span class="rotationStar">⭐</span>
+`
+
+export interface Config {
+  defTimeZone: number
+  interval: number
+  manyEvening: number
+  morningSpan: number[]
+  eveningSpan: number[]
+  morningPet: string[]
+  eveningPet: string[]
+}
+
+export const Config: Schema<Config> = Schema.object({
+  defTimeZone: Schema.number().min(-12).max(12).default(8).description('用户默认时区，范围是 -12 至 12 喵'),
+  interval: Schema.number().min(0).max(12).default(3).description('在这个时长内都是重复的喵'),
+  manyEvening: Schema.number().min(3).max(114514).default(3).description('真的重复晚安太多了喵，要骂人了喵！'),
+  morningSpan: Schema.tuple([Schema.number().min(0).max(24), Schema.number().min(0).max(24)]).default([6, 12]).description('早安 响应时间范围喵'),
+  eveningSpan: Schema.tuple([Schema.number().min(0).max(24), Schema.number().min(0).max(24)]).default([21, 3]).description('晚安 响应时间范围喵'),
+  morningPet: Schema.array(String).default(['早', '早安', '早哇', '早上好', 'ohayo', '哦哈哟', 'お早う', 'good morning']).description('人家会响应这些早安消息哦！'),
+  eveningPet: Schema.array(String).default(['晚', '晚安', '晚好', '晚上好', 'oyasuminasai', 'おやすみなさい', 'good evening', 'good night']).description('人家会响应这些晚安消息哦！'),
+})
+
