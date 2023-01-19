@@ -14,6 +14,15 @@ declare module 'koishi' {
     }
 }
 
+export interface SleepManegeStats {
+    id: number
+    uid: number
+    morningAt: number
+    eveningAt: number
+    eveningManyCount: number
+    lieMessageCount: number
+}
+
 export class SleepDatabase {
     constructor(app: Context) {
         app.model.extend('user', {
@@ -35,13 +44,8 @@ export class SleepDatabase {
             lieMessageCount: 'integer(5)'
         })
     }
-}
 
-export interface SleepManegeStats {
-    id: number,
-    uid: number
-    morningAt: number
-    eveningAt: number
-    eveningManyCount: number
-    lieMessageCount: number
+    setStats(){
+        
+    }
 }

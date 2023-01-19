@@ -24,9 +24,9 @@ export function apply(ctx: Context, config: Config) {
     let peiod: 'morning' | 'evening'
     let tag: string
 
-    if (['早', '早安'].includes(content) && (nowHour >= config.morningStart && nowHour <= config.morningEnd)) peiod = 'morning'
+    if (['早', '早安'].includes(content) && (nowHour >= config.morningSpan[0] && nowHour <= config.morningSpan[1])) peiod = 'morning'
 
-    if (['晚', '晚安'].includes(content) && (nowHour >= config.eveningStart || nowHour <= config.eveningEnd)) peiod = 'evening'
+    if (['晚', '晚安'].includes(content) && (nowHour >= config.eveningSpan[0] || nowHour <= config.eveningSpan[1])) peiod = 'evening'
 
     if (oldTime) {
       if (nowHour - new Date(oldTime).getHours() < config.interval) {
@@ -51,7 +51,7 @@ export function apply(ctx: Context, config: Config) {
 
     if (peiod) {
       session.user.lastGreetingTime = nowTime
-      return session.text(`sleep.${peiod}.${tag}`, [config.petPhrase, greetTime[0], greetTime[1], greetTime[2], 0, session.user.eveningCount])
+      return session.text(`sleep.${peiod}.${tag}`, ['喵', greetTime[0], greetTime[1], greetTime[2], 0, session.user.eveningCount])
     } else {
       return next()
     }
