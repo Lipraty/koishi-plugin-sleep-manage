@@ -1,4 +1,5 @@
 import { Context, Schema, Session } from 'koishi'
+import { } from '@koishijs/plugin-help'
 
 export const name = 'sleep-manage'
 
@@ -24,9 +25,9 @@ export function apply(ctx: Context, config: Config) {
     let peiod: 'morning' | 'evening'
     let tag: string
 
-    if (['早', '早安'].includes(content) && (nowHour >= config.morningSpan[0] && nowHour <= config.morningSpan[1])) peiod = 'morning'
+    if (config.morningPet.includes(content) && (nowHour >= config.morningSpan[0] && nowHour <= config.morningSpan[1])) peiod = 'morning'
 
-    if (['晚', '晚安'].includes(content) && (nowHour >= config.eveningSpan[0] || nowHour <= config.eveningSpan[1])) peiod = 'evening'
+    if (config.eveningPet.includes(content) && (nowHour >= config.eveningSpan[0] || nowHour <= config.eveningSpan[1])) peiod = 'evening'
 
     if (oldTime) {
       if (nowHour - new Date(oldTime).getHours() < config.interval) {
@@ -56,6 +57,21 @@ export function apply(ctx: Context, config: Config) {
       return next()
     }
   })
+
+  ctx.command('sleep', '管理你的睡眠喵')
+    .option('morning', '早安', { hidden: true })
+    .option('evening', '晚安', { hidden: true })
+    .userFields(['id', 'lastGreetingTime', 'eveningCount'])
+    .action(async ({ session, options }, args) => {
+      const nowTime = new Date()
+      let peiod: 'morning' | 'evening'
+      if(options.morning){
+        peiod = 'morning'
+        
+      }else if(options.evening){
+        peiod = 'evening'
+      }
+    })
 }
 
 //#region plugin configs
@@ -96,6 +112,7 @@ export const usage = `
 export interface Config {
   defTimeZone: number
   interval: number
+  autoMorning: boolean
   manyEvening: number
   morningSpan: number[]
   eveningSpan: number[]
@@ -106,6 +123,7 @@ export interface Config {
 export const Config: Schema<Config> = Schema.object({
   defTimeZone: Schema.number().min(-12).max(12).default(8).description('用户默认时区，范围是 -12 至 12 喵'),
   interval: Schema.number().min(0).max(12).default(3).description('在这个时长内都是重复的喵'),
+  autoMorning: Schema.boolean().default(true).description('将早安时间内的第一条消息视为早安'),
   manyEvening: Schema.number().min(3).max(114514).default(3).description('真的重复晚安太多了喵，要骂人了喵！'),
   morningSpan: Schema.tuple([Schema.number().min(0).max(24), Schema.number().min(0).max(24)]).default([6, 12]).description('早安 响应时间范围喵'),
   eveningSpan: Schema.tuple([Schema.number().min(0).max(24), Schema.number().min(0).max(24)]).default([21, 3]).description('晚安 响应时间范围喵'),
