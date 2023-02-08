@@ -14,7 +14,7 @@
   "scripts": {},
   "koishi": {
     "description": {
-      "zh": "早安喵！晚安喵~ 让sleep-manage管理你的睡眠吧~"
+      "zh": "⭐早安喵！晚安喵~ 让sleep-manage管理你的睡眠吧~"
     },
     "service": {
       "required": [
@@ -25,7 +25,10 @@
   "keywords": [
     "chatbot",
     "koishi",
-    "plugin"
+    "plugin",
+    "sleep",
+    "睡眠",
+    "睡眠管理"
   ],
   "peerDependencies": {
     "koishi": "^4.11.0"
