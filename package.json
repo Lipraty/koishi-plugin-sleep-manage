@@ -1,7 +1,7 @@
 {
   "name": "koishi-plugin-sleep-manage",
   "description": "show show your sleep!",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "main": "lib/index.js",
   "typings": "lib/index.d.ts",
   "repository": "https://github.com/Lipraty/koishi-plugin-sleep-manage",
@@ -14,7 +14,7 @@
   "scripts": {},
   "koishi": {
     "description": {
-      "zh": "早安喵！晚安喵~ 让sleep-manage管理你的睡眠吧~"
+      "zh": "⭐早安喵！晚安喵~ 让sleep-manage管理你的睡眠吧~"
     },
     "service": {
       "required": [
