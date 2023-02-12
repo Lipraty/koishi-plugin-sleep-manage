@@ -65,18 +65,11 @@ class SleepManage {
     const nowHour = new Date().getHours()
     const priv = session.subtype === 'private'
     let peiod: SleepPeiod
-    let rankList: number[]
+    let rankList: number[] = []
 
     if ((self.config.morningPet.includes(session.content) || self.config.autoMorning) && (nowHour >= self.config.morningSpan[0] && nowHour <= self.config.morningSpan[1])) peiod = 'morning'
     else if (self.config.eveningPet.includes(session.content) && (nowHour >= self.config.eveningSpan[0] || nowHour <= self.config.eveningSpan[1])) peiod = 'evening'
     else return next()
-
-    if (!priv) {
-      await reset(peiod)
-      rankList = (await getRankList(peiod)).map(v => v[0][`${peiod}Rank`])
-      rankList.push(session.user.id)
-      await onRankList(peiod, rankList)
-    }
 
     const oldTime = session.user.lastMessageAt
     const nowTime = session.user.lastMessageAt = Date.now()
@@ -92,6 +85,14 @@ class SleepManage {
       channelRank: rankList ? { [session.channelId]: rankList.length } : undefined
     }])
 
+    if (!priv && multiple) {
+      await reset(peiod)
+      const _RL = await getRankList(peiod)
+      if (_RL.length > 0) rankList = _RL.map(v => v[`${peiod}Rank`])[0]
+      rankList.push(session.user.id)
+      await onRankList(peiod, rankList)
+    }
+
     if (oldTime) {
       tag = 'prefix'
       if (multiple) {
@@ -105,7 +106,7 @@ class SleepManage {
 
     return `<message>
       <p>${defMsg}</p>
-      <p>${multiple ? '' : timeMsg}${!priv ? ', ' + session.text(`sleep.${peiod}.rank`, [rankList.length + 1]) : ''}</p>
+      <p>${multiple ? '' : timeMsg}${!priv && !multiple ? ', ' + session.text(`sleep.${peiod}.rank`, [rankList.length + 1]) : ''}</p>
     </message>`
   }
 
