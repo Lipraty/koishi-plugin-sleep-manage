@@ -116,7 +116,7 @@ class SleepManage {
       } else { session.user.eveningCount = 0 }
     } else tag = 'frist'
 
-    const defMsg = session.text(`sleep.${peiod}.${tag}`, [self.config.kuchiguse, 0, session.user.eveningCount])
+    const defMsg = session.text(`sleep.${peiod}.${tag}`, [self.config.kuchiguse, session.user.eveningCount])
     const timeMsg = session.text(`sleep.${peiod}.timer`, duration)
 
     return `<message>
