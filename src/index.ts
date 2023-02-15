@@ -8,7 +8,9 @@ declare module 'koishi' {
   }
   interface User {
     lastMessageAt: number
+    fristMorning: boolean
     eveningCount: number
+    timezone: number
   }
   interface Channel {
     eveningRank: number[]
@@ -25,15 +27,17 @@ export interface SleepManegeRecord {
 }
 
 type SleepPeiod = 'morning' | 'evening'
+type SleepSession = Session<'id' | 'lastMessageAt' | 'eveningCount' | 'fristMorning' | 'timezone', 'id'>
 //#endregion
 
 class SleepManage {
   public readonly name = 'sleep-manage'
   public readonly using = ['database']
 
+
   constructor(private ctx: Context, private config: SleepManage.Config) {
     ctx.i18n.define('zh', require('./locales/zh-cn'))
-    ctx.model.extend('user', { lastMessageAt: 'integer(14)', eveningCount: 'integer(3)' })
+    ctx.model.extend('user', { lastMessageAt: 'integer(14)', fristMorning: { type: 'boolean', initial: true }, timezone: 'integer(3)', eveningCount: 'integer(3)' })
     ctx.model.extend('channel', { morningRank: 'list', eveningRank: 'list' })
     ctx.model.extend('sleep_manage_record', {
       id: 'unsigned',
@@ -48,27 +52,38 @@ class SleepManage {
       filters.add('eveningCount')
     })
 
-    ctx.middleware((session: Session<'id' | 'lastMessageAt' | 'eveningCount', 'id'>, next) => this.onMessage(session, this, next))
+    ctx.middleware((session: SleepSession, next) => this.onMessage(session, this, next))
     ctx.command('sleep')
-      .option('morning', '', { hidden: true })
-      .option('evening', '', { hidden: true })
-      // .option('timezone', '-t')
-      .userFields(['id', 'lastMessageAt', 'eveningCount'])
-      .action(async () => { })
+      .option('timezone', '-t [tz:number]', { fallback: config.defTimeZone })
+      .userFields(['id', 'lastMessageAt', 'eveningCount', 'timezone'])
+      .action(async ({ session, options }) => {
+        if (options.timezone >= -12 || options.timezone <= 12) {
+          session.user.timezone = options.timezone
+          session.send(session.text('sleep.timezone.done', [config.kuchiguse, options.timezone]))
+        }
+      })
   }
 
-  private async onMessage(session: Session<'id' | 'lastMessageAt' | 'eveningCount', 'id'>, self: this, next: Next) {
+  private async onMessage(session: SleepSession, self: this, next: Next) {
     const getRankList = (peiod: SleepPeiod) => self.ctx.database.get('channel', { id: session.channel.id }, [`${peiod}Rank`])
     const onRankList = (peiod: SleepPeiod, newData: number[]) => self.ctx.database.set('channel', { id: session.channel.id }, { [`${peiod}Rank`]: newData })
     const reset = (peiod: SleepPeiod) => self.ctx.database.set('channel', { id: session.channel.id }, { [`${peiod === 'morning' ? 'evening' : 'morning'}Rank`]: [] })
+    // const tzd = (n: number) => n + (session.user.timezone || self.config.defTimeZone)
+    const tzd = (n: number) => n
 
     const nowHour = new Date().getHours()
     const priv = session.subtype === 'private'
     let peiod: SleepPeiod
     let rankList: number[] = []
 
-    if ((self.config.morningPet.includes(session.content) || self.config.autoMorning) && (nowHour >= self.config.morningSpan[0] && nowHour <= self.config.morningSpan[1])) peiod = 'morning'
-    else if (self.config.eveningPet.includes(session.content) && (nowHour >= self.config.eveningSpan[0] || nowHour <= self.config.eveningSpan[1])) peiod = 'evening'
+    if ((self.config.morningPet.includes(session.content) || (self.config.autoMorning && session.user.fristMorning)) && ((nowHour >= tzd(self.config.morningSpan[0])) && (nowHour <= tzd(self.config.morningSpan[1])))) {
+      peiod = 'morning'
+      session.user.fristMorning = false
+    }
+    else if (self.config.eveningPet.includes(session.content) && ((nowHour >= tzd(self.config.eveningSpan[0])) || (nowHour <= tzd(self.config.eveningSpan[1])))) {
+      peiod = 'evening'
+      session.user.fristMorning = true
+    }
     else return next()
 
     const oldTime = session.user.lastMessageAt
@@ -119,6 +134,8 @@ class SleepManage {
     const T = [H, M, S].map(v => (`${v}`.length === 1 ? `0${v}` : v).toString())
     return tuple ? T : T.join(':')
   }
+
+  private calcTZ(time: number, tz: number) { }
 }
 
 namespace SleepManage {
@@ -157,7 +174,7 @@ namespace SleepManage {
 `
 
   export interface Config {
-    // defTimeZone: number
+    defTimeZone: number
     kuchiguse: string
     interval: number
     autoMorning: boolean
@@ -169,7 +186,7 @@ namespace SleepManage {
   }
 
   export const Config: Schema<Config> = Schema.object({
-    // defTimeZone: Schema.number().min(-12).max(12).default(8).description('用户默认时区，范围是 -12 至 12 喵'),
+    defTimeZone: Schema.number().min(-12).max(12).default(8).description('用户默认时区，范围是 -12 至 12 喵'),
     kuchiguse: Schema.string().default('喵').description('谜之声Poi~'),
     interval: Schema.number().min(0).max(12).default(3).description('在这个时长内都是重复的喵'),
     autoMorning: Schema.boolean().default(true).description('将早安时间内的第一条消息视为早安'),

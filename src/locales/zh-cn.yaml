@@ -4,6 +4,8 @@ commands:
     options:
       timezone: 设置你的时区
 sleep:
+  timezone:
+    done: 时区设置成功{0}，你目前设置为了 UTC{1}
   morning:
     frist: 早安！第一次记录{0}~
     timer: 你的睡眠时长为 {0} 时 {1} 分 {2} 秒~
