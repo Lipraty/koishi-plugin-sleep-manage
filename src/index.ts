@@ -27,7 +27,7 @@ export interface SleepManegeRecord {
 }
 
 type SleepPeiod = 'morning' | 'evening'
-type SleepSession = Session<'id' | 'lastMessageAt' | 'eveningCount' | 'fristMorning' | 'timezone', 'id'>
+type SleepSession = Session<'id' | 'lastMessageAt' | 'eveningCount' | 'fristMorning' | 'timezone', 'id' | 'eveningRank' | 'morningRank'>
 //#endregion
 
 class SleepManage {
@@ -65,54 +65,59 @@ class SleepManage {
   }
 
   private async onMessage(session: SleepSession, self: this, next: Next) {
-    const getRankList = (peiod: SleepPeiod) => self.ctx.database.get('channel', { id: session.channel.id }, [`${peiod}Rank`])
-    const onRankList = (peiod: SleepPeiod, newData: number[]) => self.ctx.database.set('channel', { id: session.channel.id }, { [`${peiod}Rank`]: newData })
-    const reset = (peiod: SleepPeiod) => self.ctx.database.set('channel', { id: session.channel.id }, { [`${peiod === 'morning' ? 'evening' : 'morning'}Rank`]: [] })
+    const reset = (peiod: SleepPeiod) => self.ctx.database.set('channel', { id: session.channel.id }, { [`${peiod}Rank`]: [] })
     // const tzd = (n: number) => n + (session.user.timezone || self.config.defTimeZone)
     const tzd = (n: number) => n
 
     const nowHour = new Date().getHours()
     const priv = session.subtype === 'private'
     let peiod: SleepPeiod
-    let rankList: number[] = []
+    let rank: number
 
     if ((self.config.morningPet.includes(session.content) || (self.config.autoMorning && session.user.fristMorning)) && ((nowHour >= tzd(self.config.morningSpan[0])) && (nowHour <= tzd(self.config.morningSpan[1])))) {
       peiod = 'morning'
       session.user.fristMorning = false
+      session.user.eveningCount = 0
+      await reset('evening')
     }
     else if (self.config.eveningPet.includes(session.content) && ((nowHour >= tzd(self.config.eveningSpan[0])) || (nowHour <= tzd(self.config.eveningSpan[1])))) {
       peiod = 'evening'
       session.user.fristMorning = true
+      await reset('morning')
     }
     else return next()
 
-    const oldTime = session.user.lastMessageAt
-    const nowTime = session.user.lastMessageAt = Date.now()
+    const nowTime = Date.now()
+    const oldTime = session.user.lastMessageAt || nowTime
+    if (peiod) session.user.lastMessageAt = nowTime
     const calcTime = nowTime - oldTime
     const duration = self.timerFormat(calcTime, true) as string[]
     let multiple = nowHour - new Date(oldTime).getHours() < self.config.interval
     let tag: string
 
-    await self.ctx.database.upsert('sleep_manage_record', [{
+    if (!priv) {
+      let list = session.channel[`${peiod}Rank`] || []
+      if (list.includes(session.user.id))
+        list = self.moveEnd(list, session.user.id) //move to end
+      else
+        list.push(session.user.id)
+      //update
+      session.channel[`${peiod}Rank`] = list
+      rank = list.length
+    }
+
+    await self.ctx.database.create('sleep_manage_record', {
       uid: session.user.id,
       messageAt: nowTime,
       peiod,
-      channelRank: rankList ? { [session.channelId]: rankList.length } : undefined
-    }])
-
-    if (!priv && multiple) {
-      await reset(peiod)
-      const _RL = await getRankList(peiod)
-      if (_RL.length > 0) rankList = _RL.map(v => v[`${peiod}Rank`])[0]
-      rankList.push(session.user.id)
-      await onRankList(peiod, rankList)
-    }
+      channelRank: rank ? { [session.channelId]: rank } : undefined
+    })
 
     if (oldTime) {
       tag = 'prefix'
       if (multiple) {
         session.user.eveningCount++
-        if (peiod === 'evening') tag = 'count'
+        if (peiod === 'evening' && session.user.eveningCount >= this.config.manyEvening) tag = 'count'
       } else { session.user.eveningCount = 0 }
     } else tag = 'frist'
 
@@ -121,8 +126,17 @@ class SleepManage {
 
     return `<message>
       <p>${defMsg}</p>
-      <p>${multiple ? '' : timeMsg}${!priv && !multiple ? ', ' + session.text(`sleep.${peiod}.rank`, [rankList.length + 1]) : ''}</p>
+      <p>${multiple ? '' : timeMsg}${!priv ? ', ' + session.text(`sleep.${peiod}.rank${multiple ? 'Renew' : ''}`, [rank, self.config.kuchiguse]) : ''}</p>
     </message>`
+  }
+
+  private moveEnd<T extends unknown>(array: T[], source: T) {
+    let e = 0
+    for (let i = 0; e < array.length; e++) {
+      if (array[i] === source) array.push(array.splice(i, 1)[0])
+      else i++
+    }
+    return array
   }
 
   /** time(123456) to HH:MM:SS or [HH, MM, SS] */
