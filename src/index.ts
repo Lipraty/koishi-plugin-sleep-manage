@@ -78,12 +78,10 @@ class SleepManage {
       peiod = 'morning'
       session.user.fristMorning = false
       session.user.eveningCount = 0
-      await reset('evening')
     }
     else if (self.config.eveningPet.includes(session.content) && ((nowHour >= tzd(self.config.eveningSpan[0])) || (nowHour <= tzd(self.config.eveningSpan[1])))) {
       peiod = 'evening'
       session.user.fristMorning = true
-      await reset('morning')
     }
     else return next()
 
@@ -96,6 +94,9 @@ class SleepManage {
     let tag: string
 
     if (!priv) {
+      if(peiod==='morning') await reset('evening')
+      else await reset('morning')
+
       let list = session.channel[`${peiod}Rank`] || []
       if (list.includes(session.user.id))
         list = self.moveEnd(list, session.user.id) //move to end
