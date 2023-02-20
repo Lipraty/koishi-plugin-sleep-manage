@@ -45,7 +45,7 @@ class SleepManage {
       messageAt: 'integer(14)',
       peiod: 'string',
       channelRank: 'json'
-    }, { autoInc: true, foreign: { uid: ['user', 'id'] } })
+    }, { autoInc: true })
 
     ctx.before('attach-user', (_, filters) => {
       filters.add('lastMessageAt')
@@ -65,7 +65,6 @@ class SleepManage {
   }
 
   private async onMessage(session: SleepSession, self: this, next: Next) {
-    const reset = (peiod: SleepPeiod) => self.ctx.database.set('channel', { id: session.channel.id }, { [`${peiod}Rank`]: [] })
     // const tzd = (n: number) => n + (session.user.timezone || self.config.defTimeZone)
     const tzd = (n: number) => n
 
@@ -90,12 +89,11 @@ class SleepManage {
     if (peiod) session.user.lastMessageAt = nowTime
     const calcTime = nowTime - oldTime
     const duration = self.timerFormat(calcTime, true) as string[]
-    let multiple = nowHour - new Date(oldTime).getHours() < self.config.interval
+    let multiple = +duration[0] < self.config.interval
     let tag: string
 
     if (!priv) {
-      if(peiod==='morning') await reset('evening')
-      else await reset('morning')
+      await self.ctx.database.set('channel', { id: session.channel.id }, { [`${peiod === 'morning' ? 'evening' : 'morning'}Rank`]: [] })
 
       let list = session.channel[`${peiod}Rank`] || []
       if (list.includes(session.user.id))
@@ -104,6 +102,7 @@ class SleepManage {
         list.push(session.user.id)
       //update
       session.channel[`${peiod}Rank`] = list
+      console.log({ list, session: session.channel[`${peiod}Rank`] })
       rank = list.length
     }
 
