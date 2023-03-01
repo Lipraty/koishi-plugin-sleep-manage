@@ -93,17 +93,18 @@ class SleepManage {
     let tag: string
 
     if (!priv) {
-      await self.ctx.database.set('channel', { id: session.channel.id }, { [`${peiod === 'morning' ? 'evening' : 'morning'}Rank`]: [] })
-
-      let list = session.channel[`${peiod}Rank`] || []
-      if (list.includes(session.user.id))
-        list = self.moveEnd(list, session.user.id) //move to end
-      else
-        list.push(session.user.id)
-      //update
-      session.channel[`${peiod}Rank`] = list
-      console.log({ list, session: session.channel[`${peiod}Rank`] })
-      rank = list.length
+      // 获取排名表
+      let rankList = (await self.ctx.database.get('channel', { id: session.channelId }))[0][`${peiod}Rank`]
+      // 转换成数字数组
+      rankList = rankList.map(Number)
+      // 如果已经在排名表中，移动到最后
+      if (rankList.includes(session.user.id)) rankList = self.moveEnd(rankList, session.user.id)
+      // 否则添加到最后
+      else rankList.push(session.user.id)
+      // 获取排名
+      rank = rankList.length
+      // 保存排名表
+      await self.ctx.database.set('channel', { id: session.channelId }, { [`${peiod}Rank`]: rankList })
     }
 
     await self.ctx.database.create('sleep_manage_record', {
