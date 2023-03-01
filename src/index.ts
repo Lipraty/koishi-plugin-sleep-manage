@@ -36,8 +36,14 @@ class SleepManage {
 
 
   constructor(private ctx: Context, private config: SleepManage.Config) {
+    //#region Database
     ctx.i18n.define('zh', require('./locales/zh-cn'))
-    ctx.model.extend('user', { lastMessageAt: 'integer(14)', fristMorning: { type: 'boolean', initial: true }, timezone: 'integer(3)', eveningCount: 'integer(3)' })
+    ctx.model.extend('user', {
+      lastMessageAt: 'integer(14)',
+      fristMorning: { type: 'boolean', initial: true },
+      timezone: { type: 'integer', initial: config.defTimeZone },
+      eveningCount: 'integer(3)'
+    })
     ctx.model.extend('channel', { morningRank: 'list', eveningRank: 'list' })
     ctx.model.extend('sleep_manage_record', {
       id: 'unsigned',
@@ -51,13 +57,13 @@ class SleepManage {
       filters.add('lastMessageAt')
       filters.add('eveningCount')
     })
-
+    //#endregion
     ctx.middleware((session: SleepSession, next) => this.onMessage(session, this, next))
     ctx.command('sleep')
-      .option('timezone', '-t [tz:number]', { fallback: config.defTimeZone })
+      .option('timezone', '-t <tz:number>')
       .userFields(['id', 'lastMessageAt', 'eveningCount', 'timezone'])
       .action(async ({ session, options }) => {
-        if (options.timezone >= -12 || options.timezone <= 12) {
+        if (options.timezone && (options.timezone >= -12 || options.timezone <= 12)) {
           session.user.timezone = options.timezone
           session.send(session.text('sleep.timezone.done', [config.kuchiguse, options.timezone]))
         }
@@ -65,7 +71,6 @@ class SleepManage {
   }
 
   private async onMessage(session: SleepSession, self: this, next: Next) {
-    // const tzd = (n: number) => n + (session.user.timezone || self.config.defTimeZone)
     const tzd = (n: number) => n
 
     const nowHour = new Date().getHours()
@@ -92,21 +97,17 @@ class SleepManage {
     let multiple = +duration[0] < self.config.interval
     let tag: string
 
+    // Channel Rank
     if (!priv) {
-      // 获取排名表
       let rankList = (await self.ctx.database.get('channel', { id: session.channelId }))[0][`${peiod}Rank`]
-      // 转换成数字数组
-      rankList = rankList.map(Number)
-      // 如果已经在排名表中，移动到最后
+      rankList = rankList.map(Number) // to number
       if (rankList.includes(session.user.id)) rankList = self.moveEnd(rankList, session.user.id)
-      // 否则添加到最后
       else rankList.push(session.user.id)
-      // 获取排名
       rank = rankList.length
-      // 保存排名表
       await self.ctx.database.set('channel', { id: session.channelId }, { [`${peiod}Rank`]: rankList })
     }
 
+    //Sleep Logger
     await self.ctx.database.create('sleep_manage_record', {
       uid: session.user.id,
       messageAt: nowTime,
@@ -122,13 +123,13 @@ class SleepManage {
       } else { session.user.eveningCount = 0 }
     } else tag = 'frist'
 
-    const defMsg = session.text(`sleep.${peiod}.${tag}`, [self.config.kuchiguse, session.user.eveningCount])
-    const timeMsg = session.text(`sleep.${peiod}.timer`, duration)
-
-    return `<message>
-      <p>${defMsg}</p>
-      <p>${multiple ? '' : timeMsg}${!priv ? ', ' + session.text(`sleep.${peiod}.rank${multiple ? 'Renew' : ''}`, [rank, self.config.kuchiguse]) : ''}</p>
-    </message>`
+    let output = `<message><p>${session.text(`sleep.${peiod}.${tag}`, [self.config.kuchiguse, session.user.eveningCount])}</p><p>`
+    if (!multiple) {
+      output += `${multiple ? '' : session.text(`sleep.${peiod}.timer`, duration)}`
+      if (!priv) output += ', '
+    }
+    if (!priv) output += session.text(`sleep.${peiod}.rank${multiple ? 'Renew' : ''}`, [rank, self.config.kuchiguse])
+    return output + '</p></message>'
   }
 
   private moveEnd<T extends unknown>(array: T[], source: T) {
@@ -179,8 +180,6 @@ namespace SleepManage {
 
 ## 插件说明喵
 
-> 由于 0.2 完全重写了数据库的代码，如果主人是从 0.1.x 版本升级上来的，可能会遇到一些问题哦！
-
 主人好喵~ 你可以在我存在的任何地方跟我说“早安”或“晚安”来记录你的作息哦~
 
 请注意下列时间设置是24小时制哦
@@ -208,8 +207,8 @@ namespace SleepManage {
     manyEvening: Schema.number().min(3).max(114514).default(3).description('真的重复晚安太多了喵，要骂人了喵！'),
     morningSpan: Schema.tuple([Schema.number().min(0).max(24), Schema.number().min(0).max(24)]).default([6, 12]).description('早安 响应时间范围喵'),
     eveningSpan: Schema.tuple([Schema.number().min(0).max(24), Schema.number().min(0).max(24)]).default([21, 3]).description('晚安 响应时间范围喵'),
-    morningPet: Schema.array(String).default(['早', '早安', '早哇', '早上好', 'ohayo', '哦哈哟', 'お早う', 'good morning']).description('人家会响应这些早安消息哦！'),
-    eveningPet: Schema.array(String).default(['晚', '晚安', '晚好', '晚上好', 'oyasuminasai', 'おやすみなさい', 'good evening', 'good night']).description('人家会响应这些晚安消息哦！'),
+    morningPet: Schema.array(String).default(['早', '早安', '早哇', '起床', '早上好', 'ohayo', '哦哈哟', 'お早う', 'good morning']).description('人家会响应这些早安消息哦！'),
+    eveningPet: Schema.array(String).default(['晚', '晚安', '晚好', '睡觉', '晚上好', 'oyasuminasai', 'おやすみなさい', 'good evening', 'good night']).description('人家会响应这些晚安消息哦！'),
   })
 }
 
