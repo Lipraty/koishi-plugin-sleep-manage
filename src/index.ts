@@ -54,8 +54,16 @@ class SleepManage {
     }, { autoInc: true })
 
     ctx.before('attach-user', (_, filters) => {
-      filters.add('lastMessageAt')
-      filters.add('eveningCount')
+      filters.add('id')
+        .add('lastMessageAt')
+        .add('eveningCount')
+        .add('eveningCount')
+        .add('timezone')
+    })
+    ctx.before('attach-channel', (_, filters) => {
+      filters.add('id')
+        .add('eveningRank')
+        .add('morningRank')
     })
     //#endregion
     ctx.middleware((session: SleepSession, next) => this.onMessage(session, this, next))
@@ -63,33 +71,33 @@ class SleepManage {
       .option('timezone', '-t <tz:number>')
       .userFields(['id', 'lastMessageAt', 'eveningCount', 'timezone'])
       .action(async ({ session, options }) => {
-        if (options.timezone && (options.timezone >= -12 || options.timezone <= 12)) {
+        if (options.timezone >= -12 || options.timezone <= 12) {
           session.user.timezone = options.timezone
-          session.send(session.text('sleep.timezone.done', [config.kuchiguse, options.timezone]))
+          session.send(session.text('sleep.timezone.done', [config.kuchiguse, `${options.timezone >= 0 ? '+' + options.timezone : options.timezone}`]))
         }
       })
   }
 
   private async onMessage(session: SleepSession, self: this, next: Next) {
-    const tzd = (n: number) => n
-
-    const nowHour = new Date().getHours()
+    console.log(session.user)
+    const nowTime = Date.now() + ((session.user.timezone || 0) * 3600000)
+    const nowHour = new Date(nowTime).getHours()
     const priv = session.subtype === 'private'
     let peiod: SleepPeiod
     let rank: number
 
-    if ((self.config.morningPet.includes(session.content) || (self.config.autoMorning && session.user.fristMorning)) && ((nowHour >= tzd(self.config.morningSpan[0])) && (nowHour <= tzd(self.config.morningSpan[1])))) {
+    if ((self.config.morningPet.includes(session.content) || (self.config.autoMorning && session.user.fristMorning)) && ((nowHour >= self.config.morningSpan[0]) && (nowHour <= self.config.morningSpan[1]))) {
       peiod = 'morning'
       session.user.fristMorning = false
       session.user.eveningCount = 0
     }
-    else if (self.config.eveningPet.includes(session.content) && ((nowHour >= tzd(self.config.eveningSpan[0])) || (nowHour <= tzd(self.config.eveningSpan[1])))) {
+    else if (self.config.eveningPet.includes(session.content) && ((nowHour >= self.config.eveningSpan[0]) || (nowHour <= self.config.eveningSpan[1]))) {
       peiod = 'evening'
       session.user.fristMorning = true
     }
     else return next()
 
-    const nowTime = Date.now()
+
     const oldTime = session.user.lastMessageAt || nowTime
     if (peiod) session.user.lastMessageAt = nowTime
     const calcTime = nowTime - oldTime
@@ -151,7 +159,9 @@ class SleepManage {
     return tuple ? T : T.join(':')
   }
 
-  private calcTZ(time: number, tz: number) { }
+  private calcTZ(time: number, tz: number) {
+
+  }
 }
 
 namespace SleepManage {
