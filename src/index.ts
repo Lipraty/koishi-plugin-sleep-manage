@@ -79,7 +79,6 @@ class SleepManage {
   }
 
   private async onMessage(session: SleepSession, self: this, next: Next) {
-    console.log(session.user)
     const nowTime = Date.now() + ((session.user.timezone || 0) * 3600000)
     const nowHour = new Date(nowTime).getHours()
     const priv = session.subtype === 'private'
