@@ -4,81 +4,115 @@ import { } from '@koishijs/plugin-help'
 //#region 
 declare module 'koishi' {
   interface Tables {
-    sleep_manage_record: SleepManegeRecord
+    sleep_manage_v2: SleepManageLogger
   }
   interface User {
-    lastMessageAt: number
-    fristMorning: boolean
-    eveningCount: number
     timezone: number
-  }
-  interface Channel {
-    eveningRank: number[]
-    morningRank: number[]
+    sleeping: boolean
   }
 }
 
-export interface SleepManegeRecord {
-  id: number
-  uid: number
-  messageAt: number
-  peiod: SleepPeiod
-  channelRank: Record<string, number>
+export interface SleepManageLogger {
+  id: number          //记录ID
+  uid: number         //用户ID
+  messageAt: number   //消息时间
+  from: string        //消息来源: platfrom:channelId (if platform is private, channelId is user id)
+  endMessage: string  //最后一次消息
 }
-
-type SleepPeiod = 'morning' | 'evening'
-type SleepSession = Session<'id' | 'lastMessageAt' | 'eveningCount' | 'fristMorning' | 'timezone', 'id' | 'eveningRank' | 'morningRank'>
 //#endregion
 
 class SleepManage {
   public readonly name = 'sleep-manage'
   public readonly using = ['database']
 
-
   constructor(private ctx: Context, private config: SleepManage.Config) {
     //#region Database
     ctx.i18n.define('zh', require('./locales/zh-cn'))
     ctx.model.extend('user', {
-      lastMessageAt: 'integer(14)',
-      fristMorning: { type: 'boolean', initial: true },
-      timezone: { type: 'integer', initial: config.defTimeZone },
-      eveningCount: 'integer(3)'
+      timezone: 'integer(2)',
+      sleeping: { type: 'boolean', initial: false },
     })
-    ctx.model.extend('channel', { morningRank: 'list', eveningRank: 'list' })
-    ctx.model.extend('sleep_manage_record', {
+    ctx.model.extend('sleep_manage_v2', {
       id: 'unsigned',
       uid: 'unsigned',
       messageAt: 'integer(14)',
-      peiod: 'string',
-      channelRank: 'json'
+      from: 'string(32)',
+      endMessage: 'string(256)'
     }, { autoInc: true })
 
-    ctx.before('attach-user', (_, filters) => {
+    ctx.before('attach-user', ({ }, filters) => {
       filters.add('id')
-        .add('lastMessageAt')
-        .add('eveningCount')
-        .add('eveningCount')
         .add('timezone')
     })
-    ctx.before('attach-channel', (_, filters) => {
-      filters.add('id')
-        .add('eveningRank')
-        .add('morningRank')
-    })
     //#endregion
-    ctx.middleware((session: SleepSession, next) => this.onMessage(session, this, next))
+    ctx.on('message', this.onMessage.bind(this))
     ctx.command('sleep')
       .option('timezone', '-t <tz:number>')
-      .userFields(['id', 'lastMessageAt', 'eveningCount', 'timezone'])
+      .option('week', '-w')
+      .option('month', '-m')
+      .option('year', '-y')
+      .userFields(['id', 'timezone'])
       .action(async ({ session, options }) => {
         if (options.timezone >= -12 || options.timezone <= 12) {
           session.user.timezone = options.timezone
           session.send(session.text('sleep.timezone.done', [config.kuchiguse, `${options.timezone >= 0 ? '+' + options.timezone : options.timezone}`]))
         }
+
+        if (Object.keys(options).length <= 0) {
+          //通过数据库统计睡眠情况
+          const sleepLogger = await ctx.database.get('sleep_manage_v2', { uid: session.user.id })
+          const sleepLoggerCount = sleepLogger.length
+          const sleepLoggerLast = sleepLogger[sleepLoggerCount - 1]
+          const sleepLoggerLastTime = sleepLoggerLast ? sleepLoggerLast.messageAt : 0
+          const sleepLoggerLastMessage = sleepLoggerLast ? sleepLoggerLast.endMessage : ''
+          const sleepLoggerLastFrom = sleepLoggerLast ? sleepLoggerLast.from : ''
+          const sleepLoggerLastFromPlatform = sleepLoggerLastFrom.split(':')[0]
+          const sleepLoggerLastFromChannel = sleepLoggerLastFrom.split(':')[1]
+          const sleepLoggerLastFromChannelName = sleepLoggerLastFromPlatform === 'private' ? sleepLoggerLastFromChannel : (await ctx.database.get('channel', { id: sleepLoggerLastFromChannel }))[0].name
+          const sleepLoggerLastFromChannelNameText = sleepLoggerLastFromChannelName ? `「${sleepLoggerLastFromChannelName}」` : ''
+          
+        }
       })
   }
 
-  private async onMessage(session: SleepSession, self: this, next: Next) {
+  private async onMessage(session: Session<'id' | 'timezone' | 'sleeping'>) {
+    let peiod: 'morning' | 'evening'
+
+    // time and timezone
+    const _nowTime = new Date().getTime()
+    const localeTimezone = new Date().getTimezoneOffset() / -60
+    const userTimezone = session.user.timezone || localeTimezone
+    const nowTime = _nowTime + (userTimezone * 3600000)
+    const nowHour = new Date(nowTime).getHours()
+    const reduceDay = (time: number) => time - 86400000
+    // today morning and evening
+    const startTime = new Date(nowTime).setUTCHours(this.config.morningSpan[0], 0, 0, 0)
+    const endTime = new Date(nowTime).setUTCHours(this.config.eveningSpan[1], 0, 0, 0) + (this.config.eveningSpan[1] > 0 ? 86400000 : 0)
+
+    // checke message is morning or evening
+    if ((nowHour >= this.config.morningSpan[0] && nowHour <= this.config.morningSpan[1])
+      && ((this.config.autoMorning && session.user.sleeping) || this.config.morningPet.includes(session.content))) {
+      peiod = 'morning'
+      session.user.sleeping = false
+    } else if (this.config.eveningPet.includes(session.content)) {
+      peiod = 'evening'
+      session.user.sleeping = true
+    } else return
+
+    const direct = session.isDirect || session.subtype === 'private' // fallback old version
+
+    // message recording
+    await this.ctx.database.create('sleep_manage_v2', {
+      uid: session.user.id,
+      messageAt: nowTime,
+      from: `${direct ? 'private' : session.platform}:${session.channelId || session.userId}`,
+      endMessage: session.content
+    })
+
+
+  }
+
+  private async onMessage_(session: SleepSession, self: this, next: Next) {
     const nowTime = Date.now() + ((session.user.timezone || 0) * 3600000)
     const nowHour = new Date(nowTime).getHours()
     const priv = session.subtype === 'private'
@@ -197,7 +231,6 @@ namespace SleepManage {
 `
 
   export interface Config {
-    defTimeZone: number
     kuchiguse: string
     interval: number
     autoMorning: boolean
@@ -209,7 +242,6 @@ namespace SleepManage {
   }
 
   export const Config: Schema<Config> = Schema.object({
-    defTimeZone: Schema.number().min(-12).max(12).default(8).description('用户默认时区，范围是 -12 至 12 喵'),
     kuchiguse: Schema.string().default('喵').description('谜之声Poi~'),
     interval: Schema.number().min(0).max(12).default(3).description('在这个时长内都是重复的喵'),
     autoMorning: Schema.boolean().default(true).description('将早安时间内的第一条消息视为早安'),
