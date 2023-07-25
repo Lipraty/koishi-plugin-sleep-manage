@@ -59,7 +59,16 @@ class SleepManage {
         }
 
         if (Object.keys(options).length <= 0) {
-          //通过数据库统计睡眠情况
+          // gencode by copilot👇
+          const _nowTime = new Date().getTime()
+          const localeTimezone = new Date().getTimezoneOffset() / -60
+          const userTimezone = session.user.timezone || localeTimezone
+          const nowTime = _nowTime + (userTimezone * 3600000)
+          const nowHour = new Date(nowTime).getHours()
+          const reduceDay = (time: number) => time - 86400000
+          const startTime = new Date(nowTime).setUTCHours(this.config.morningSpan[0], 0, 0, 0)
+          const endTime = new Date(nowTime).setUTCHours(this.config.eveningSpan[1], 0, 0, 0) + (this.config.eveningSpan[1] > 0 ? 86400000 : 0)
+
           const sleepLogger = await ctx.database.get('sleep_manage_v2', { uid: session.user.id })
           const sleepLoggerCount = sleepLogger.length
           const sleepLoggerLast = sleepLogger[sleepLoggerCount - 1]
@@ -78,18 +87,16 @@ class SleepManage {
   private async onMessage(session: Session<'id' | 'timezone' | 'sleeping'>) {
     let peiod: 'morning' | 'evening'
 
-    // time and timezone
+
     const _nowTime = new Date().getTime()
     const localeTimezone = new Date().getTimezoneOffset() / -60
     const userTimezone = session.user.timezone || localeTimezone
     const nowTime = _nowTime + (userTimezone * 3600000)
     const nowHour = new Date(nowTime).getHours()
     const reduceDay = (time: number) => time - 86400000
-    // today morning and evening
     const startTime = new Date(nowTime).setUTCHours(this.config.morningSpan[0], 0, 0, 0)
     const endTime = new Date(nowTime).setUTCHours(this.config.eveningSpan[1], 0, 0, 0) + (this.config.eveningSpan[1] > 0 ? 86400000 : 0)
 
-    // checke message is morning or evening
     if ((nowHour >= this.config.morningSpan[0] && nowHour <= this.config.morningSpan[1])
       && ((this.config.autoMorning && session.user.sleeping) || this.config.morningPet.includes(session.content))) {
       peiod = 'morning'
@@ -99,79 +106,82 @@ class SleepManage {
       session.user.sleeping = true
     } else return
 
+
+    const userSleepBefore = await this.ctx.database.get('sleep_manage_v2', { 
+      uid: session.user.id,
+      messageAt: { $gte: reduceDay(startTime), $lte: reduceDay(endTime) }
+    })
+    const newSleep = userSleepBefore.length <= 0
     const direct = session.isDirect || session.subtype === 'private' // fallback old version
 
-    // message recording
     await this.ctx.database.create('sleep_manage_v2', {
       uid: session.user.id,
       messageAt: nowTime,
       from: `${direct ? 'private' : session.platform}:${session.channelId || session.userId}`,
       endMessage: session.content
     })
-
-
   }
 
-  private async onMessage_(session: SleepSession, self: this, next: Next) {
-    const nowTime = Date.now() + ((session.user.timezone || 0) * 3600000)
-    const nowHour = new Date(nowTime).getHours()
-    const priv = session.subtype === 'private'
-    let peiod: SleepPeiod
-    let rank: number
+  // private async onMessage(session: SleepSession, self: this, next: Next) {
+  //   const nowTime = Date.now() + ((session.user.timezone || 0) * 3600000)
+  //   const nowHour = new Date(nowTime).getHours()
+  //   const priv = session.subtype === 'private'
+  //   let peiod: SleepPeiod
+  //   let rank: number
 
-    if ((self.config.morningPet.includes(session.content) || (self.config.autoMorning && session.user.fristMorning)) && ((nowHour >= self.config.morningSpan[0]) && (nowHour <= self.config.morningSpan[1]))) {
-      peiod = 'morning'
-      session.user.fristMorning = false
-      session.user.eveningCount = 0
-    }
-    else if (self.config.eveningPet.includes(session.content) && ((nowHour >= self.config.eveningSpan[0]) || (nowHour <= self.config.eveningSpan[1]))) {
-      peiod = 'evening'
-      session.user.fristMorning = true
-    }
-    else return next()
+  //   if ((self.config.morningPet.includes(session.content) || (self.config.autoMorning && session.user.fristMorning)) && ((nowHour >= self.config.morningSpan[0]) && (nowHour <= self.config.morningSpan[1]))) {
+  //     peiod = 'morning'
+  //     session.user.fristMorning = false
+  //     session.user.eveningCount = 0
+  //   }
+  //   else if (self.config.eveningPet.includes(session.content) && ((nowHour >= self.config.eveningSpan[0]) || (nowHour <= self.config.eveningSpan[1]))) {
+  //     peiod = 'evening'
+  //     session.user.fristMorning = true
+  //   }
+  //   else return next()
 
 
-    const oldTime = session.user.lastMessageAt || nowTime
-    if (peiod) session.user.lastMessageAt = nowTime
-    const calcTime = nowTime - oldTime
-    const duration = self.timerFormat(calcTime, true) as string[]
-    let multiple = +duration[0] < self.config.interval
-    let tag: string
+  //   const oldTime = session.user.lastMessageAt || nowTime
+  //   if (peiod) session.user.lastMessageAt = nowTime
+  //   const calcTime = nowTime - oldTime
+  //   const duration = self.timerFormat(calcTime, true) as string[]
+  //   let multiple = +duration[0] < self.config.interval
+  //   let tag: string
 
-    // Channel Rank
-    if (!priv) {
-      let rankList = (await self.ctx.database.get('channel', { id: session.channelId }))[0][`${peiod}Rank`]
-      rankList = rankList.map(Number) // to number
-      if (rankList.includes(session.user.id)) rankList = self.moveEnd(rankList, session.user.id)
-      else rankList.push(session.user.id)
-      rank = rankList.length
-      await self.ctx.database.set('channel', { id: session.channelId }, { [`${peiod}Rank`]: rankList })
-    }
+  //   // Channel Rank
+  //   if (!priv) {
+  //     let rankList = (await self.ctx.database.get('channel', { id: session.channelId }))[0][`${peiod}Rank`]
+  //     rankList = rankList.map(Number) // to number
+  //     if (rankList.includes(session.user.id)) rankList = self.moveEnd(rankList, session.user.id)
+  //     else rankList.push(session.user.id)
+  //     rank = rankList.length
+  //     await self.ctx.database.set('channel', { id: session.channelId }, { [`${peiod}Rank`]: rankList })
+  //   }
 
-    //Sleep Logger
-    await self.ctx.database.create('sleep_manage_record', {
-      uid: session.user.id,
-      messageAt: nowTime,
-      peiod,
-      channelRank: rank ? { [session.channelId]: rank } : undefined
-    })
+  //   //Sleep Logger
+  //   await self.ctx.database.create('sleep_manage_record', {
+  //     uid: session.user.id,
+  //     messageAt: nowTime,
+  //     peiod,
+  //     channelRank: rank ? { [session.channelId]: rank } : undefined
+  //   })
 
-    if (oldTime) {
-      tag = 'prefix'
-      if (multiple) {
-        session.user.eveningCount++
-        if (peiod === 'evening' && session.user.eveningCount >= this.config.manyEvening) tag = 'count'
-      } else { session.user.eveningCount = 0 }
-    } else tag = 'frist'
+  //   if (oldTime) {
+  //     tag = 'prefix'
+  //     if (multiple) {
+  //       session.user.eveningCount++
+  //       if (peiod === 'evening' && session.user.eveningCount >= this.config.manyEvening) tag = 'count'
+  //     } else { session.user.eveningCount = 0 }
+  //   } else tag = 'frist'
 
-    let output = `<message><p>${session.text(`sleep.${peiod}.${tag}`, [self.config.kuchiguse, session.user.eveningCount])}</p><p>`
-    if (!multiple) {
-      output += `${multiple ? '' : session.text(`sleep.${peiod}.timer`, duration)}`
-      if (!priv) output += ', '
-    }
-    if (!priv) output += session.text(`sleep.${peiod}.rank${multiple ? 'Renew' : ''}`, [rank, self.config.kuchiguse])
-    return output + '</p></message>'
-  }
+  //   let output = `<message><p>${session.text(`sleep.${peiod}.${tag}`, [self.config.kuchiguse, session.user.eveningCount])}</p><p>`
+  //   if (!multiple) {
+  //     output += `${multiple ? '' : session.text(`sleep.${peiod}.timer`, duration)}`
+  //     if (!priv) output += ', '
+  //   }
+  //   if (!priv) output += session.text(`sleep.${peiod}.rank${multiple ? 'Renew' : ''}`, [rank, self.config.kuchiguse])
+  //   return output + '</p></message>'
+  // }
 
   private moveEnd<T extends unknown>(array: T[], source: T) {
     let e = 0
