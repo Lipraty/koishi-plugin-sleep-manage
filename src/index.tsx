@@ -153,8 +153,7 @@ export function apply(ctx: Context, config: SleepManage.Config) {
       calcTime = nowTime - userLoggerBefore[userLoggerBefore.length - 1].messageAt
     }
 
-    next(() => {
-      return <message>{
+    return <message>{
         frist
           ? <text peiod={peiod} path={'frist'}></text>
           : <>
@@ -163,7 +162,6 @@ export function apply(ctx: Context, config: SleepManage.Config) {
             {direct ?? <text peiod={peiod} path={'rank'} args={[rank]}></text>}
           </>
       }</message>
-    })
   })
 }
 
