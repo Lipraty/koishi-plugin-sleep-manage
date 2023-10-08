@@ -15,6 +15,7 @@ export namespace SleepManage {
   export interface Config {
     kuchiguse: string
     interval: number
+    timezone: true | number
     command: boolean
     morning: boolean
     toomany: number

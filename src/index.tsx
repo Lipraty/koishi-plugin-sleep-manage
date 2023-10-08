@@ -178,6 +178,10 @@ function timerFormat(time: number, tuple?: boolean): string | [string, string, s
 export const Config: Schema<SleepManage.Config> = Schema.object({
   kuchiguse: Schema.string().default('喵').description('谜之声Poi~'),
   command: Schema.boolean().default(false).description('是否启用指令喵').hidden(),
+  timezone: Schema.union([
+    Schema.number().min(-12).max(12).description('自定义喵'),
+    Schema.const(true).description('使用用户本机时区'),
+    ]).default(true).description('时区喵'),
   interval: Schema.number().min(0).max(6).default(3).description('在这个时长内都是重复的喵'),
   morning: Schema.boolean().default(true).description('将早安时间内的第一条消息视为早安'),
   toomany: Schema.number().min(3).max(114514).default(3).description('真的重复晚安太多了喵，要骂人了喵！'),
