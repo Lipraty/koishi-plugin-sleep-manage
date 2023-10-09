@@ -11,7 +11,7 @@ declare module 'koishi' {
   }
 
   interface Session {
-    sleepField: Observed<SleepManage.Fileds>
+    sleepField: Observed<SleepManage.Fields>
   }
 }
 
@@ -38,7 +38,7 @@ export namespace SleepManage {
     from: string        //消息来源: platfrom:guildId (if platform is private, guildId is user id)
   }
 
-  export type Fileds = Pick<SleepManage.Database, 'uid' | 'from'> & {
+  export type Fields = Pick<SleepManage.Database, 'uid' | 'from'> & {
     save: boolean
     time?: number
   }
@@ -52,4 +52,4 @@ export namespace SleepManage {
   export type DKeys = keyof Database
 }
 
-export type Peiod = 'morning' | 'evening'
+export type Period = 'morning' | 'evening'

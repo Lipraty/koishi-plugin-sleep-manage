@@ -1,7 +1,7 @@
 import { $, Context, Element, Keys, Schema, Session, observe } from 'koishi'
 import { } from '@koishijs/plugin-help'
 import * as Commander from './command'
-import { Peiod, SleepManage } from './types'
+import { Period, SleepManage } from './types'
 
 
 export const usage = `
@@ -70,7 +70,7 @@ export function apply(ctx: Context, config: SleepManage.Config) {
   ctx.before('attach', async (session: Session<'id' | SleepManage.User.TimeZone, 'guildId' | 'platform'>) => {
     const { id: uid } = session.user
     const timezone = session.user[SleepManage.User.TimeZone] || new Date().getTimezoneOffset() / -60
-    session.sleepField = observe<SleepManage.Fileds, void>({
+    session.sleepField = observe<SleepManage.Fields, void>({
       uid,
       from: `${session.isDirect ? 'private' : session.guild.platform}:${session.guild.guildId || session.user.id}`,
       save: false
@@ -99,9 +99,9 @@ export function apply(ctx: Context, config: SleepManage.Config) {
     })
   }
 
-  function text(peiod: Peiod, path: string, args?: any[]): Element {
+  function text(period: Period, path: string, args?: any[]): Element {
     return <p>
-      <i18n path={`sleep.${peiod}.${path}`}>
+      <i18n path={`sleep.${period}.${path}`}>
         {[
           config.kuchiguse,
           ...args
@@ -111,7 +111,7 @@ export function apply(ctx: Context, config: SleepManage.Config) {
   }
 
   ctx.middleware(async (session: Session<SleepManage.User | 'id'>, next) => {
-    let peiod: Peiod
+    let period: Period
     let calcTime: number = -1
     let rank: number = -1
 
@@ -129,16 +129,16 @@ export function apply(ctx: Context, config: SleepManage.Config) {
       messageAt: { $gte: startTime, $lte: endTime },
       from: `${platform}:${guildId}`
     }).execute(row => $.count(row.id))
-    const frist = userLoggerBefore.length <= 0
+    const first = userLoggerBefore.length <= 0
 
     if (nowTime >= morningStartTime && nowTime <= morningEndTime) {
       if (this.config.morningPet.includes(content) || (this.config.autoMorning && session.user.sleeping)) {
-        peiod = 'morning'
+        period = 'morning'
         session.user.sleeping = false
       }
     } else if (nowTime >= eveningStartTime && nowTime <= eveningEndTime) {
       if (this.config.eveningPet.includes(content)) {
-        peiod = 'evening'
+        period = 'evening'
         session.user.sleeping = true
         session.user.eveningCount++
       }
@@ -151,7 +151,7 @@ export function apply(ctx: Context, config: SleepManage.Config) {
     session.sleepField.time = nowTime
     session.sleepField.save = true
 
-    if (peiod === 'morning') {
+    if (period === 'morning') {
       const lastEveningTimes = userLoggerBefore
         .filter(v => v.messageAt >= reduceDay(eveningStartTime) && v.messageAt <= reduceDay(eveningEndTime))
         .sort((a, b) => b.messageAt - a.messageAt)
@@ -160,7 +160,7 @@ export function apply(ctx: Context, config: SleepManage.Config) {
       }
     }
 
-    if (peiod === 'evening') {
+    if (period === 'evening') {
       if (userLoggerToDay.length > 0) {
         calcTime = nowTime - userLoggerToDay[0].messageAt
       }
@@ -173,12 +173,12 @@ export function apply(ctx: Context, config: SleepManage.Config) {
     }
 
     return <message>{
-      frist
-        ? <text peiod={peiod} path={'frist'}></text>
+      first
+        ? <text period={period} path={'first'}></text>
         : <>
-          <text peiod={peiod} path={'reply'}></text>
-          <text peiod={peiod} path={'timer'} args={timerFormat(calcTime, true)}></text>
-          {isDirect ?? <text peiod={peiod} path={'rank'} args={[rank]}></text>}
+          <text period={period} path={'reply'}></text>
+          <text period={period} path={'timer'} args={timerFormat(calcTime, true)}></text>
+          {isDirect ?? <text period={period} path={'rank'} args={[rank]}></text>}
         </>
     }</message>
   })
