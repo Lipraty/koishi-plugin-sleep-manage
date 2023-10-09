@@ -1,4 +1,4 @@
-import { $, Context, Element, Keys, Schema, Session } from 'koishi'
+import { $, Context, Element, Keys, Schema, Session, observe } from 'koishi'
 import { } from '@koishijs/plugin-help'
 import * as Commander from './command'
 import { Peiod, SleepManage } from './types'
@@ -43,6 +43,8 @@ export const using = ['database']
 const reduceDay = (time: number) => time - 86400000
 
 export function apply(ctx: Context, config: SleepManage.Config) {
+  const logger = ctx.logger('sleep-manage')
+
   ctx.i18n.define('zh', require('./locales/zh-cn'))
   //#region Database
   ctx.model.extend('user', {
@@ -63,6 +65,28 @@ export function apply(ctx: Context, config: SleepManage.Config) {
       .add(SleepManage.User.TimeZone)
       .add(SleepManage.User.EveningCount)
       .add(SleepManage.User.Sleeping)
+  })
+
+  ctx.before('attach', async (session: Session<'id' | SleepManage.User.TimeZone, 'guildId' | 'platform'>) => {
+    const { id: uid } = session.user
+    const timezone = session.user[SleepManage.User.TimeZone] || new Date().getTimezoneOffset() / -60
+    session.sleepField = observe<SleepManage.Fileds, void>({
+      uid,
+      from: `${session.isDirect ? 'private' : session.guild.platform}:${session.guild.guildId || session.user.id}`,
+      save: false
+    }, ({ save, uid, time, from }) => {
+      if (save) {
+        ctx.database.create('sleep_manage_v2', {
+          uid,
+          messageAt: time,
+          from
+        }).then(() => {
+          logger.debug('saved: ', uid, time)
+        }).catch(e => {
+          logger.error('Error: ', e)
+        })
+      }
+    })
   })
   //#endregion
 
@@ -91,46 +115,41 @@ export function apply(ctx: Context, config: SleepManage.Config) {
     let calcTime: number = -1
     let rank: number = -1
 
-    const direct = session.isDirect
-    const userContent = session.content
-    const nowTime = new Date().getTime() + (session.user.timezone || new Date().getTimezoneOffset() / -60 * 3600000)
-    const morningStartTime = new Date(nowTime).setUTCHours(this.config.morningSpan[0], 0, 0, 0)
-    const morningEndTime = new Date(nowTime).setUTCHours(this.config.morningSpan[1], 0, 0, 0)
-    const eveningStartTime = new Date(nowTime).setUTCHours(this.config.eveningSpan[0], 0, 0, 0)
-    const eveningEndTime = new Date(nowTime).setUTCHours(this.config.eveningSpan[1], 0, 0, 0) + (Math.abs(this.config.eveningSpan[0] - (this.config.eveningSpan[1] + 24)) < 24 ? 86400000 : 0)
+    const { content, isDirect, platform, guildId } = session
+    const nowTime = new Date().getTime() + (config.timezone === true ? new Date().getTimezoneOffset() * 60000 : config.timezone * 3600000)
+    const morningStartTime = genUTCHours(nowTime, this.config.morningSpan[0])
+    const morningEndTime = genUTCHours(nowTime, this.config.morningSpan[1])
+    const eveningStartTime = genUTCHours(nowTime, this.config.eveningSpan[0])
+    const eveningEndTime = genUTCHours(nowTime, this.config.eveningSpan[1]) + (Math.abs(this.config.eveningSpan[0] - (this.config.eveningSpan[1] + 24)) < 24 ? 86400000 : 0)
     const startTime = morningStartTime
     const endTime = eveningEndTime
     const userLoggerBefore: SleepManage.Database[] = await getData(session.user.id, reduceDay(startTime), reduceDay(endTime))
     const userLoggerToDay: SleepManage.Database[] = await getData(session.user.id, startTime, endTime)
-    const guildRank = await ctx.database.select('sleep_manage_v2', {
+    const guildRank = isDirect ? -1 : await ctx.database.select('sleep_manage_v2', {
       messageAt: { $gte: startTime, $lte: endTime },
-      from: `${session.platform}:${session.guildId}`
+      from: `${platform}:${guildId}`
     }).execute(row => $.count(row.id))
     const frist = userLoggerBefore.length <= 0
 
     if (nowTime >= morningStartTime && nowTime <= morningEndTime) {
-      if (this.config.morningPet.includes(userContent) || (this.config.autoMorning && session.user.sleeping)) {
+      if (this.config.morningPet.includes(content) || (this.config.autoMorning && session.user.sleeping)) {
         peiod = 'morning'
         session.user.sleeping = false
       }
     } else if (nowTime >= eveningStartTime && nowTime <= eveningEndTime) {
-      if (this.config.eveningPet.includes(userContent)) {
+      if (this.config.eveningPet.includes(content)) {
         peiod = 'evening'
         session.user.sleeping = true
         session.user.eveningCount++
       }
     } else {
       // TODO
-      next()
-      return
+      return next()
     }
 
     // 记录本次早/晚安
-    await this.ctx.database.create('sleep_manage_v2', {
-      uid: session.user.id,
-      messageAt: nowTime,
-      from: `${direct ? 'private' : session.platform}:${session.guildId || session.userId}`
-    })
+    session.sleepField.time = nowTime
+    session.sleepField.save = true
 
     if (peiod === 'morning') {
       const lastEveningTimes = userLoggerBefore
@@ -154,14 +173,18 @@ export function apply(ctx: Context, config: SleepManage.Config) {
     }
 
     return <message>{
-        frist
-          ? <text peiod={peiod} path={'frist'}></text>
-          : <>
-            <text peiod={peiod} path={'reply'}></text>
-            <text peiod={peiod} path={'timer'} args={timerFormat(calcTime, true)}></text>
-            {direct ?? <text peiod={peiod} path={'rank'} args={[rank]}></text>}
-          </>
-      }</message>
+      frist
+        ? <text peiod={peiod} path={'frist'}></text>
+        : <>
+          <text peiod={peiod} path={'reply'}></text>
+          <text peiod={peiod} path={'timer'} args={timerFormat(calcTime, true)}></text>
+          {isDirect ?? <text peiod={peiod} path={'rank'} args={[rank]}></text>}
+        </>
+    }</message>
+  })
+
+  ctx.middleware(async ({ sleepField }) => {
+    sleepField.$update()
   })
 }
 
@@ -175,13 +198,16 @@ function timerFormat(time: number, tuple?: boolean): string | [string, string, s
   return tuple ? T : T.join(':')
 }
 
+function genUTCHours(now: number, hh: number, mm: number = 0, ss: number = 0): number {
+  return new Date(now).setUTCHours(hh, mm, ss, 0)
+}
 export const Config: Schema<SleepManage.Config> = Schema.object({
   kuchiguse: Schema.string().default('喵').description('谜之声Poi~'),
   command: Schema.boolean().default(false).description('是否启用指令喵').hidden(),
   timezone: Schema.union([
     Schema.number().min(-12).max(12).description('自定义喵'),
     Schema.const(true).description('使用用户本机时区'),
-    ]).default(true).description('时区喵'),
+  ]).default(true).description('时区喵'),
   interval: Schema.number().min(0).max(6).default(3).description('在这个时长内都是重复的喵'),
   morning: Schema.boolean().default(true).description('将早安时间内的第一条消息视为早安'),
   toomany: Schema.number().min(3).max(114514).default(3).description('真的重复晚安太多了喵，要骂人了喵！'),

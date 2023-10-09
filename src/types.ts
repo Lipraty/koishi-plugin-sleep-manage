@@ -1,4 +1,6 @@
-declare module 'koishi'{
+import { Observed } from "koishi"
+
+declare module 'koishi' {
   interface Tables {
     sleep_manage_v2: SleepManage.Database
   }
@@ -6,6 +8,10 @@ declare module 'koishi'{
     [SleepManage.User.TimeZone]: number
     [SleepManage.User.EveningCount]: number
     [SleepManage.User.Sleeping]: boolean
+  }
+
+  interface Session {
+    sleepField: Observed<SleepManage.Fileds>
   }
 }
 
@@ -30,6 +36,11 @@ export namespace SleepManage {
     uid: number         //用户ID
     messageAt: number   //消息时间
     from: string        //消息来源: platfrom:guildId (if platform is private, guildId is user id)
+  }
+
+  export type Fileds = Pick<SleepManage.Database, 'uid' | 'from'> & {
+    save: boolean
+    time?: number
   }
 
   export const enum User {
