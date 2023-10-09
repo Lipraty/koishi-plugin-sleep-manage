@@ -117,10 +117,10 @@ export function apply(ctx: Context, config: SleepManage.Config) {
 
     const { content, isDirect, platform, guildId } = session
     const nowTime = new Date().getTime() + (config.timezone === true ? new Date().getTimezoneOffset() * 60000 : config.timezone * 3600000)
-    const morningStartTime = genUTCHours(nowTime, this.config.morningSpan[0])
-    const morningEndTime = genUTCHours(nowTime, this.config.morningSpan[1])
-    const eveningStartTime = genUTCHours(nowTime, this.config.eveningSpan[0])
-    const eveningEndTime = genUTCHours(nowTime, this.config.eveningSpan[1]) + (Math.abs(this.config.eveningSpan[0] - (this.config.eveningSpan[1] + 24)) < 24 ? 86400000 : 0)
+    const morningStartTime = genUTCHours(nowTime, config.morningSpan[0])
+    const morningEndTime = genUTCHours(nowTime, config.morningSpan[1])
+    const eveningStartTime = genUTCHours(nowTime, config.eveningSpan[0])
+    const eveningEndTime = genUTCHours(nowTime, config.eveningSpan[1]) + (Math.abs(config.eveningSpan[0] - (config.eveningSpan[1] + 24)) < 24 ? 86400000 : 0)
     const startTime = morningStartTime
     const endTime = eveningEndTime
     const userLoggerBefore: SleepManage.Database[] = await getData(session.user.id, reduceDay(startTime), reduceDay(endTime))
@@ -132,12 +132,12 @@ export function apply(ctx: Context, config: SleepManage.Config) {
     const first = userLoggerBefore.length <= 0
 
     if (nowTime >= morningStartTime && nowTime <= morningEndTime) {
-      if (this.config.morningPet.includes(content) || (this.config.autoMorning && session.user.sleeping)) {
+      if (config.morningPet.includes(content) || (config.morning && session.user.sleeping)) {
         period = 'morning'
         session.user.sleeping = false
       }
     } else if (nowTime >= eveningStartTime && nowTime <= eveningEndTime) {
-      if (this.config.eveningPet.includes(content)) {
+      if (config.eveningPet.includes(content)) {
         period = 'evening'
         session.user.sleeping = true
         session.user.eveningCount++
