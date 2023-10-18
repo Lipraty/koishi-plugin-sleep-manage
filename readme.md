@@ -17,9 +17,9 @@ _🎈 Manage your sleep time with Koishi Bot! 🎈_
 
 In Koishi console WebUI or Koishi Desktop App:
 
-- open the `plugin market` and search for `sleep-manage`.
-- click the `add` button of the first one.
-- Congratulation! You have to click the `start plugin` button to start the plugin of the config page.
+- open the `Plugin Market` and search for `sleep-manage`.
+- click the `Add` button of the first one.
+- Congratulation! You can now click the `Enable` button of the config page and voilà!
 
 Or in your terminal:
 
@@ -63,7 +63,7 @@ Just like communicating with a human, say hello to the Bot!
 - `kuchiguse` : Suffix phrase adding to every sentence the Bot saying.
 - `command`: Prefix for every commands, default is `sleep`.
 - `timezone` : Default timezone.
-- `interval` : Set amount of time to suspend to trigger greetings.
+- `interval` : Set amount of time to supress trigger greetings.
 - `morning`: Set whether to automatically regard everyone's first message in a day as the `good morning` trigger.
 - `toomany`: Set whether to respond user triggers multiple times in `interval` amount of time.
 - `morningSpan`: Morning trigger time span.
