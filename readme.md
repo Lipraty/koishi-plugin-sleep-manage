@@ -17,8 +17,8 @@ _🎈 Manage your sleep time with Koishi Bot! 🎈_
 
 In Koishi console WebUI or Koishi Desktop App:
 
-- open the `plugin market` and search `sleep-manage`.
-- click the `apply` button.
+- open the `plugin market` and search for `sleep-manage`.
+- click the `add` button of the first one.
 - Congratulation! You have to click the `start plugin` button to start the plugin of the config page.
 
 Or in your terminal:
@@ -33,39 +33,39 @@ koi yarn -n default add koishi-plugin-sleep-manage
 
 ## 🎮Usage
 
-Just like communicating with a human, send your greeting to the Bot!
+Just like communicating with a human, say hello to the Bot!
 
-### Tigger in message
+### Triggers
 
-- `早安` - Good morning.
-- `晚安` - Good night.
+- `早安` - Say good morning to the Bot indicating that you are awake.
+- `晚安` - Say good night to the Bot indicating that you are asleep.
   
-> You can also use other words to trigger the bot, but you need to set it yourself of config page.
+> You can also use other words as triggers, there are several related configuration in the config page of the plugin.
 
 ### Commands
 
 `sleep` - Show the command helper.
 
-`sleep.timezone` - Set your timezone. (default: bot's timezone) (e.g. +8)
+`sleep.timezone` - Set your own timezone instead of the default one. (e.g. `+8` for UTC +0800)
 
-(WIP) `sleep.sleep` - Set your sleep time. (e.g. 23:00) if you are still send message, the bot will remind you to sleep.
+(WIP) `sleep.sleep` - Set the time for bed. (e.g. 23:00) if you are still chating, the bot will remind you to go to bed.
 
-`sleep.auto` - Switch auto trig morning for your a frist message.
+`sleep.auto` - Set whether to automatically regard your first message in a day as the `good morning` trigger.
 
-`sleep.week` - Your sleep weekly report.
+`sleep.week` - Show your weekly report for your sleep.
 
-`sleep.month` - Your sleep monthly report.
+`sleep.month` - Show your monthly report for your sleep.
 
-`sleep.year` - Your sleep yearly report.
+`sleep.year` - Show your yearly report for your sleep.
 
 ## 🔧 Config
 
-- `kuchiguse` : Pet Phrase.
-- `command`: Switch command.
-- `timezone` : Bot's timezone.
-- `interval` : repeated over a period of time.
-- `morning`: Switch morning auto trigger.
-- `toomany`: Switch too many message.
+- `kuchiguse` : Suffix phrase adding to every sentence the Bot saying.
+- `command`: Prefix for every commands, default is `sleep`.
+- `timezone` : Default timezone.
+- `interval` : Set amount of time to suspend to trigger greetings.
+- `morning`: Set whether to automatically regard everyone's first message in a day as the `good morning` trigger.
+- `toomany`: Set whether to respond user triggers multiple times in `interval` amount of time.
 - `morningSpan`: Morning trigger time span.
 - `eveningSpan`: Evening trigger time span.
 - `morningPet`: Response word of morning.
