@@ -71,6 +71,16 @@ Just like communicating with a human, say hello to the Bot!
 - `morningPet`: Response word of morning.
 - `eveningPet`: Response word of evening.
 
+## 🥰 Thanks
+
+<a href="https://jb.gg/OpenSourceSupport"><img src="https://resources.jetbrains.com/storage/products/company/brand/logos/jb_beam.svg" height="80" width="80" alt="JetBrains Logo (Main) logo."></a>
+
+Thanks to JetBrains for supporting my open source project!
+
+### Contributors
+
+[![Star History Chart](https://contrib.rocks/image?repo=Lipraty/koishi-plugin-sleep-manage)](https://github.com/Lipraty/koishi-plugin-sleep-manage/graphs/contributors)
+
 ## 📄 License
 
 The project is licensed under the [MIT License](./LICENSE).
