@@ -27,7 +27,7 @@ Or in your terminal:
 yarn add koishi-plugin-sleep-manage
 # or use npm:
 npm i koishi-plugin-sleep-manage
-## or use koishi desktop terminal(unsafe, may cause you can't get help from the qq group):
+## or use koishi desktop terminal(ilharp's user QQ group doesn't provide help for using this):
 koi yarn -n default add koishi-plugin-sleep-manage
 ```
 
