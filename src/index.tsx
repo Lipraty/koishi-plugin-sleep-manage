@@ -2,6 +2,7 @@ import { $, Context, Element, Keys, Schema, Session, observe } from 'koishi'
 import { } from '@koishijs/plugin-help'
 import * as Commander from './command'
 import { Period, SleepManage } from './types'
+import { getTimeByTZ, getTodaySpan, timerFormat } from './utils'
 
 
 export const usage = `
@@ -116,13 +117,17 @@ export function apply(ctx: Context, config: SleepManage.Config) {
     let rank: number = -1
 
     const { content, isDirect, platform, guildId } = session
-    const nowTime = new Date().getTime() + (config.timezone === true ? new Date().getTimezoneOffset() * 60000 : config.timezone * 3600000)
-    const morningStartTime = genUTCHours(nowTime, config.morningSpan[0])
-    const morningEndTime = genUTCHours(nowTime, config.morningSpan[1])
-    const eveningStartTime = genUTCHours(nowTime, config.eveningSpan[0])
-    const eveningEndTime = genUTCHours(nowTime, config.eveningSpan[1]) + (Math.abs(config.eveningSpan[0] - (config.eveningSpan[1] + 24)) < 24 ? 86400000 : 0)
-    const startTime = morningStartTime
-    const endTime = eveningEndTime
+    const nowTime = getTimeByTZ(config.timezone === true ? new Date().getTimezoneOffset() / -60 : config.timezone).getTime()
+    const {
+      morningStart, morningEnd,
+      eveningStart, eveningEnd,
+      start: startTime, end: endTime
+    } = getTodaySpan(nowTime, {
+      morningStart: config.morningSpan[0],
+      morningEnd: config.morningSpan[1],
+      eveningStart: config.eveningSpan[0],
+      eveningEnd: config.eveningSpan[1],
+    })
     const userLoggerBefore: SleepManage.Database[] = await getData(session.user.id, reduceDay(startTime), reduceDay(endTime))
     const userLoggerToDay: SleepManage.Database[] = await getData(session.user.id, startTime, endTime)
     const guildRank = isDirect ? -1 : await ctx.database.select('sleep_manage_v2', {
@@ -131,12 +136,12 @@ export function apply(ctx: Context, config: SleepManage.Config) {
     }).execute(row => $.count(row.id))
     const first = userLoggerBefore.length <= 0
 
-    if (nowTime >= morningStartTime && nowTime <= morningEndTime) {
+    if (nowTime >= morningStart && nowTime <= morningEnd) {
       if (config.morningPet.includes(content) || (config.morning && session.user.sleeping)) {
         period = 'morning'
         session.user.sleeping = false
       }
-    } else if (nowTime >= eveningStartTime && nowTime <= eveningEndTime) {
+    } else if (nowTime >= eveningStart && nowTime <= eveningEnd) {
       if (config.eveningPet.includes(content)) {
         period = 'evening'
         session.user.sleeping = true
@@ -153,9 +158,9 @@ export function apply(ctx: Context, config: SleepManage.Config) {
 
     if (period === 'morning') {
       const lastEveningTimes = userLoggerBefore
-        .filter(v => v.messageAt >= reduceDay(eveningStartTime) && v.messageAt <= reduceDay(eveningEndTime))
+        .filter(v => v.messageAt >= reduceDay(eveningStart) && v.messageAt <= reduceDay(eveningEnd))
         .sort((a, b) => b.messageAt - a.messageAt)
-      if (lastEveningTimes[0].messageAt >= reduceDay(eveningStartTime) && lastEveningTimes[0].messageAt <= reduceDay(eveningEndTime)) {
+      if (lastEveningTimes[0].messageAt >= reduceDay(eveningStart) && lastEveningTimes[0].messageAt <= reduceDay(eveningEnd)) {
         calcTime = nowTime - lastEveningTimes[0].messageAt
       }
     }
@@ -188,19 +193,6 @@ export function apply(ctx: Context, config: SleepManage.Config) {
   })
 }
 
-/** time(123456) to HH:MM:SS or [HH, MM, SS] */
-function timerFormat(time: number, tuple?: boolean): string | [string, string, string] {
-  const t = (n: number) => Math.trunc(n)
-  const S = t((time % (1000 * 60)) / 1000)
-  const M = t((time % (1000 * 60 * 60)) / (1000 * 60))
-  const H = t((time % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60))
-  const T = [H, M, S].map(v => (`${v}`.length === 1 ? `0${v}` : v).toString()) as [string, string, string]
-  return tuple ? T : T.join(':')
-}
-
-function genUTCHours(now: number, hh: number, mm: number = 0, ss: number = 0): number {
-  return new Date(now).setUTCHours(hh, mm, ss, 0)
-}
 export const Config: Schema<SleepManage.Config> = Schema.object({
   kuchiguse: Schema.string().default('喵').description('谜之声Poi~'),
   command: Schema.boolean().default(false).description('是否启用指令喵').hidden(),

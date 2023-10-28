@@ -52,7 +52,7 @@ export namespace SleepManage {
   export type DKeys = keyof Database
 }
 
-export type Peiod = 'morning' | 'evening'
+export type Period = 'morning' | 'evening'
 
 export interface TimeSpan {
   morningStart: number

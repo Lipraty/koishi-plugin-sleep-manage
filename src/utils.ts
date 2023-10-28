@@ -1,9 +1,9 @@
 import { TimeSpan } from "./types"
 
-export function getTimeByTZ(tz: number) {
-  const date = new Date()
-  const utc = date.getTime() + (date.getTimezoneOffset() * 60000)
-  const newDate = new Date(utc + (3600000 * tz))
+export function getTimeByTZ(tz: number = 0) {
+  const time = new Date().getTime()
+  const offset = tz * 3600000
+  const newDate = new Date(time + offset)
   return newDate
 }
 
@@ -22,8 +22,8 @@ export function timerFormat(time: number, tuple?: boolean): string | [string, st
   return tuple ? T : T.join(':')
 }
 
-export function getTodaySpan(time: number, config: TimeSpan): TimeSpan{
-  const morningStart = genUTCHours(time, config.eveningStart)
+export function getTodaySpan(time: number, config: Pick<TimeSpan, 'eveningEnd' | 'eveningStart' | 'morningEnd' | 'morningStart'>): TimeSpan{
+  const morningStart = genUTCHours(time, config.morningStart)
   const morningEnd = genUTCHours(time, config.morningEnd)
   const eveningStart = genUTCHours(time, config.eveningStart)
   const eveningEnd = genUTCHours(time, config.eveningEnd) + (Math.abs(this.config.eveningStart - (this.config.eveningEnd + 24)) < 24 ? 86400000 : 0)
