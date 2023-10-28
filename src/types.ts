@@ -53,3 +53,12 @@ export namespace SleepManage {
 }
 
 export type Peiod = 'morning' | 'evening'
+
+export interface TimeSpan {
+  morningStart: number
+  morningEnd: number
+  eveningStart: number
+  eveningEnd: number
+  start: number
+  end: number
+}
