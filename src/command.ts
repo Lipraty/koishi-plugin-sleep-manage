@@ -2,7 +2,7 @@ import { Context } from "koishi";
 import { SleepManage } from "./types";
 
 export function apply(ctx: Context, config: SleepManage.Config) {
-  ctx.command('sleep')
+  const cmd = ctx.command('sleep')
     .option('timezone', '-t <tz:number>')
     .option('week', '-w')
     .option('month', '-m')
@@ -17,5 +17,17 @@ export function apply(ctx: Context, config: SleepManage.Config) {
       if (Object.keys(options).length <= 0) {
 
       }
+    })
+
+  cmd.subcommand('morning', { hidden: true })
+    .userFields(['id', SleepManage.User.TimeZone, SleepManage.User.EveningCount, SleepManage.User.Sleeping])
+    .action(async ({ session }) => {
+
+    })
+
+  cmd.subcommand('evening', { hidden: true })
+    .userFields(['id', SleepManage.User.TimeZone, SleepManage.User.EveningCount, SleepManage.User.Sleeping])
+    .action(async ({ session }) => {
+
     })
 }
