@@ -1,5 +1,6 @@
-import { Context } from "koishi";
+import { Command, Context } from "koishi";
 import { SleepManage } from "./types";
+import { getTimeByTZ } from "./utils";
 
 export function apply(ctx: Context, config: SleepManage.Config) {
   const cmd = ctx.command('sleep')
@@ -19,15 +20,23 @@ export function apply(ctx: Context, config: SleepManage.Config) {
       }
     })
 
-  cmd.subcommand('morning', { hidden: true })
-    .userFields(['id', SleepManage.User.TimeZone, SleepManage.User.EveningCount, SleepManage.User.Sleeping])
+  withSubcommand(cmd, 'morning', config,true)
     .action(async ({ session }) => {
-
+      session.user[SleepManage.User.Sleeping] = false
     })
 
-  cmd.subcommand('evening', { hidden: true })
-    .userFields(['id', SleepManage.User.TimeZone, SleepManage.User.EveningCount, SleepManage.User.Sleeping])
+  withSubcommand(cmd, 'evening', config,true)
     .action(async ({ session }) => {
+      session.user[SleepManage.User.Sleeping] = true
+      session.user[SleepManage.User.EveningCount]++
+    })
+}
 
+function withSubcommand(cmd: Command, sub: string, config: SleepManage.Config, hidden = false) {
+  return cmd.subcommand(`.${sub}`, { hidden })
+    .userFields(['id', SleepManage.User.TimeZone, SleepManage.User.EveningCount, SleepManage.User.Sleeping])
+    .before(async ({ session, options }) => {
+      const now = getTimeByTZ(session.user[SleepManage.User.TimeZone] || config.timezone === true ? new Date().getTimezoneOffset() / -60 : config.timezone)
+      
     })
 }
