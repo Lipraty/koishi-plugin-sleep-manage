@@ -137,15 +137,17 @@ export function apply(ctx: Context, config: SleepManage.Config) {
     const first = userLoggerBefore.length <= 0
 
     if (nowTime >= morningStart && nowTime <= morningEnd) {
-      if (config.morningPet.includes(content) || (config.morning && session.user.sleeping)) {
-        period = 'morning'
-        session.user.sleeping = false
-      }
+      // if (config.morningPet.includes(content) || (config.morning && session.user.sleeping)) {
+      //   period = 'morning'
+      //   session.user.sleeping = false
+      // }
+      session.execute(`sleep.morning ${first ? '-f' : ''}`)
     } else if (nowTime >= eveningStart && nowTime <= eveningEnd) {
       if (config.eveningPet.includes(content)) {
-        period = 'evening'
-        session.user.sleeping = true
-        session.user.eveningCount++
+        // period = 'evening'
+        // session.user.sleeping = true
+        // session.user.eveningCount++
+        session.execute(`sleep.evening ${first ? '-f' : ''}`)
       }
     } else {
       // TODO
