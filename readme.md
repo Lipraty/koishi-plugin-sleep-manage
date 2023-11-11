@@ -61,15 +61,15 @@ Just like communicating with a human, say hello to the Bot!
 ## 🔧 Config
 
 - `kuchiguse` : Suffix phrase adding to every sentence the Bot saying.
-- `command`: Prefix for every commands, default is `sleep`.
+- ~~`command`: Prefix for every commands, default is `sleep`.~~
 - `timezone` : Default timezone.
 - `interval` : Set amount of time to supress trigger greetings.
-- `morning`: Set whether to automatically regard everyone's first message in a day as the `good morning` trigger.
-- `toomany`: Set whether to respond user triggers multiple times in `interval` amount of time.
+- `firstMorning`: Set whether to automatically regard everyone's first message in a day as the `good morning` trigger.
+- `multiTrigger`: Set whether to respond user triggers multiple times in `interval` amount of time.
 - `morningSpan`: Morning trigger time span.
 - `eveningSpan`: Evening trigger time span.
-- `morningPet`: Response word of morning.
-- `eveningPet`: Response word of evening.
+- `morningWord`: Response word of morning.
+- `eveningWord`: Response word of evening.
 
 ## 🥰 Thanks
 
