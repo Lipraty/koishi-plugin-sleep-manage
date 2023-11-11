@@ -1,8 +1,8 @@
-import { $, Context, Element, Keys, Schema, Session, observe } from 'koishi'
+import { $, Context, Keys, Schema, Session, observe } from 'koishi'
 import { } from '@koishijs/plugin-help'
 import * as Commander from './command'
-import { Period, SleepManage } from './types'
-import { getTimeByTZ, getTodaySpan, timerFormat } from './utils'
+import { SleepManage } from './types'
+import { getTimeByTZ, getTodaySpan } from './utils'
 
 
 export const usage = `
@@ -45,6 +45,7 @@ const reduceDay = (time: number) => time - 86400000
 
 export function apply(ctx: Context, config: SleepManage.Config) {
   const logger = ctx.logger('sleep-manage')
+
 
   ctx.i18n.define('zh', require('./locales/zh-cn'))
   //#region Database
@@ -91,6 +92,13 @@ export function apply(ctx: Context, config: SleepManage.Config) {
   })
   //#endregion
 
+  ctx.on('ready', () => {
+    // loop by half-day
+    ctx.setInterval(async () => {
+
+    }, 43200000)
+  })
+
   if (config.command) ctx.plugin(Commander, config)
 
   function getData(uid: number, start: number, end: number): Promise<Pick<SleepManage.Database, Keys<SleepManage.Database, any>>[]> {
@@ -100,22 +108,7 @@ export function apply(ctx: Context, config: SleepManage.Config) {
     })
   }
 
-  function text(period: Period, path: string, args?: any[]): Element {
-    return <p>
-      <i18n path={`sleep.${period}.${path}`}>
-        {[
-          config.kuchiguse,
-          ...args
-        ]}
-      </i18n>
-    </p>
-  }
-
   ctx.middleware(async (session: Session<SleepManage.User | 'id'>, next) => {
-    let period: Period
-    let calcTime: number = -1
-    let rank: number = -1
-
     const { content, isDirect, platform, guildId } = session
     const nowTime = getTimeByTZ(config.timezone === true ? new Date().getTimezoneOffset() / -60 : config.timezone).getTime()
     const {
@@ -130,64 +123,49 @@ export function apply(ctx: Context, config: SleepManage.Config) {
     })
     const userLoggerBefore: SleepManage.Database[] = await getData(session.user.id, reduceDay(startTime), reduceDay(endTime))
     const userLoggerToDay: SleepManage.Database[] = await getData(session.user.id, startTime, endTime)
-    const guildRank = isDirect ? -1 : await ctx.database.select('sleep_manage_v2', {
+
+    session.$sleep.first = userLoggerBefore.length <= 0
+    session.$sleep.rank = isDirect ? -1 : await ctx.database.select('sleep_manage_v2', {
       messageAt: { $gte: startTime, $lte: endTime },
       from: `${platform}:${guildId}`
     }).execute(row => $.count(row.id))
-    const first = userLoggerBefore.length <= 0
 
     if (nowTime >= morningStart && nowTime <= morningEnd) {
-      // if (config.morningPet.includes(content) || (config.morning && session.user.sleeping)) {
-      //   period = 'morning'
-      //   session.user.sleeping = false
-      // }
-      session.execute(`sleep.morning ${first ? '-f' : ''}`)
+      if (userLoggerToDay.length > 0) {
+        session.$sleep.calcTime = nowTime - userLoggerToDay[0].messageAt
+      } else {
+        session.$sleep.calcTime = nowTime - userLoggerBefore[userLoggerBefore.length - 1].messageAt
+      }
+
+      if (config.morningPet.includes(content) || (config.morning && session.user.sleeping)) {
+        session.$sleep.now = nowTime
+        session.$sleep.startT = morningStart
+        session.$sleep.endT = morningEnd
+        const lastEveningTimes = userLoggerBefore
+          .filter(v => v.messageAt >= reduceDay(eveningStart) && v.messageAt <= reduceDay(eveningEnd))
+          .sort((a, b) => b.messageAt - a.messageAt)
+        if (lastEveningTimes[0].messageAt >= reduceDay(eveningStart) && lastEveningTimes[0].messageAt <= reduceDay(eveningEnd)) {
+          session.$sleep.calcTime = nowTime - lastEveningTimes[0].messageAt
+        }
+        await session.execute(`sleep.morning`)
+      }
     } else if (nowTime >= eveningStart && nowTime <= eveningEnd) {
       if (config.eveningPet.includes(content)) {
-        // period = 'evening'
-        // session.user.sleeping = true
-        // session.user.eveningCount++
-        session.execute(`sleep.evening ${first ? '-f' : ''}`)
+        session.$sleep.now = nowTime
+        session.$sleep.startT = eveningStart
+        session.$sleep.endT = eveningEnd
+        if (userLoggerToDay.length > 0) {
+          session.$sleep.calcTime = nowTime - userLoggerToDay[0].messageAt
+        }
+        await session.execute(`sleep.evening`)
       }
     } else {
       // TODO
       return next()
     }
 
-    // 记录本次早/晚安
     session.sleepField.time = nowTime
     session.sleepField.save = true
-
-    if (period === 'morning') {
-      const lastEveningTimes = userLoggerBefore
-        .filter(v => v.messageAt >= reduceDay(eveningStart) && v.messageAt <= reduceDay(eveningEnd))
-        .sort((a, b) => b.messageAt - a.messageAt)
-      if (lastEveningTimes[0].messageAt >= reduceDay(eveningStart) && lastEveningTimes[0].messageAt <= reduceDay(eveningEnd)) {
-        calcTime = nowTime - lastEveningTimes[0].messageAt
-      }
-    }
-
-    if (period === 'evening') {
-      if (userLoggerToDay.length > 0) {
-        calcTime = nowTime - userLoggerToDay[0].messageAt
-      }
-    }
-
-    if (userLoggerToDay.length > 0) {
-      calcTime = nowTime - userLoggerToDay[0].messageAt
-    } else {
-      calcTime = nowTime - userLoggerBefore[userLoggerBefore.length - 1].messageAt
-    }
-
-    return <message>{
-      first
-        ? <text period={period} path={'first'}></text>
-        : <>
-          <text period={period} path={'reply'}></text>
-          <text period={period} path={'timer'} args={timerFormat(calcTime, true)}></text>
-          {isDirect ?? <text period={period} path={'rank'} args={[rank]}></text>}
-        </>
-    }</message>
   })
 
   ctx.middleware(async ({ sleepField }) => {

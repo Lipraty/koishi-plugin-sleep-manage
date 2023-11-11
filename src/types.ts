@@ -12,6 +12,7 @@ declare module 'koishi' {
 
   interface Session {
     sleepField: Observed<SleepManage.Fields>
+    $sleep: SleepManage.Session
   }
 }
 
@@ -41,6 +42,16 @@ export namespace SleepManage {
   export type Fields = Pick<SleepManage.Database, 'uid' | 'from'> & {
     save: boolean
     time?: number
+  }
+
+  export interface Session {
+    now: number
+    first: boolean
+    period: Period
+    startT: number
+    endT: number
+    calcTime: number
+    rank?: number
   }
 
   export const enum User {
