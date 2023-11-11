@@ -5,46 +5,16 @@ import { SleepManage } from './types'
 import { getTimeByTZ, getTodaySpan } from './utils'
 
 
-export const usage = `
-<style>
-@keyframes rot {
-  0% {
-    transform: rotateZ(0deg);
-  }
-  100% {
-    transform: rotateZ(360deg);
-  }
-}
+export const usage = require('fs').readFileSync(require.resolve('./usage.md'), 'utf8')
 
-.rotationStar {
-  display: inline-block;
-  animation: rot 3.5s linear infinite;
-  opacity: 1;
-  transition: 1.5s cubic-bezier(0.4, 0, 1, 1);
-}
-.rotationStar:hover {
-  opacity: 0;
-  transition: 0.35s cubic-bezier(0.4, 0, 1, 1);
-}
-</style>
-
-## 插件说明喵
-
-主人好喵~ 你可以在我存在的任何地方跟我说“早安”或“晚安”来记录你的作息哦~
-
-请注意下列时间设置是24小时制哦
-
-然后没有什么要说明的了~<span class="rotationStar">⭐</span>
-`
-
-export const name = 'sleep-manage'
+export const name = SleepManage.NAME
 
 export const using = ['database']
 
 const reduceDay = (time: number) => time - 86400000
 
 export function apply(ctx: Context, config: SleepManage.Config) {
-  const logger = ctx.logger('sleep-manage')
+  const logger = ctx.logger(SleepManage.NAME)
 
 
   ctx.i18n.define('zh', require('./locales/zh-cn'))
@@ -137,7 +107,7 @@ export function apply(ctx: Context, config: SleepManage.Config) {
         session.$sleep.calcTime = nowTime - userLoggerBefore[userLoggerBefore.length - 1].messageAt
       }
 
-      if (config.morningPet.includes(content) || (config.morning && session.user.sleeping)) {
+      if (config.morningWord.includes(content) || (config.firstMorning && session.user.sleeping)) {
         session.$sleep.now = nowTime
         session.$sleep.startT = morningStart
         session.$sleep.endT = morningEnd
@@ -150,7 +120,7 @@ export function apply(ctx: Context, config: SleepManage.Config) {
         await session.execute(`sleep.morning`)
       }
     } else if (nowTime >= eveningStart && nowTime <= eveningEnd) {
-      if (config.eveningPet.includes(content)) {
+      if (config.eveningWord.includes(content)) {
         session.$sleep.now = nowTime
         session.$sleep.startT = eveningStart
         session.$sleep.endT = eveningEnd
@@ -181,10 +151,10 @@ export const Config: Schema<SleepManage.Config> = Schema.object({
     Schema.const(true).description('使用用户本机时区'),
   ]).default(true).description('时区喵'),
   interval: Schema.number().min(0).max(6).default(3).description('在这个时长内都是重复的喵'),
-  morning: Schema.boolean().default(true).description('将早安时间内的第一条消息视为早安'),
-  toomany: Schema.number().min(3).max(114514).default(3).description('真的重复晚安太多了喵，要骂人了喵！'),
+  firstMorning: Schema.boolean().default(true).description('将早安时间内的第一条消息视为早安'),
+  multiTrigger: Schema.number().min(3).max(114514).default(3).description('真的重复晚安太多了喵，要骂人了喵！'),
   morningSpan: Schema.tuple([Schema.number().min(0).max(12), Schema.number().min(0).max(12)]).default([6, 12]).description('早安 响应时间范围喵'),
   eveningSpan: Schema.tuple([Schema.number().min(12).max(23), Schema.number().min(0).max(23)]).default([21, 3]).description('晚安 响应时间范围喵'),
-  morningPet: Schema.array(String).default(['早', '早安', '早哇', '起床', '早上好', 'ohayo', '哦哈哟', 'お早う', 'good morning']).description('人家会响应这些早安消息哦！'),
-  eveningPet: Schema.array(String).default(['晚', '晚安', '晚好', '睡觉', '晚上好', 'oyasuminasai', 'おやすみなさい', 'good evening', 'good night']).description('人家会响应这些晚安消息哦！'),
+  morningWord: Schema.array(String).default(['早', '早安', '早哇', '起床', '早上好', 'ohayo', '哦哈哟', 'お早う', 'good morning']).description('人家会响应这些早安消息哦！'),
+  eveningWord: Schema.array(String).default(['晚', '晚安', '晚好', '睡觉', '晚上好', 'oyasuminasai', 'おやすみなさい', 'good evening', 'good night']).description('人家会响应这些晚安消息哦！'),
 })
