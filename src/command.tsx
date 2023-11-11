@@ -1,14 +1,6 @@
-import { Command, Context } from "koishi";
-import { SleepManage } from "./types";
-import { genUTCHours, getTimeByTZ, timerFormat } from "./utils";
-
-interface ResultMessagerProps {
-  first: boolean
-  period: 'morning' | 'evening'
-  calcTime: number
-  rank?: number
-  isDirect?: boolean
-}
+import { Command, Context } from "koishi"
+import { SleepManage } from "./types"
+import { genUTCHours, getTimeByTZ, timerFormat } from "./utils"
 
 export function apply(ctx: Context, config: SleepManage.Config) {
   const getHours = (userTZ: number, time: number) => genUTCHours(getTimeByTZ(userTZ || config.timezone === true ? new Date().getTimezoneOffset() / -60 : config.timezone).getTime(), time)
