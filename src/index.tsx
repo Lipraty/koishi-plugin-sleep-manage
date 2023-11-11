@@ -23,6 +23,7 @@ export function apply(ctx: Context, config: SleepManage.Config) {
     timezone: 'integer(2)',
     eveningCount: 'integer(2)',
     sleeping: { type: 'boolean', initial: false },
+    firstMorning: { type: 'boolean', initial: config.firstMorning }
   })
   ctx.model.extend('sleep_manage_v2', {
     id: 'unsigned',
@@ -99,6 +100,10 @@ export function apply(ctx: Context, config: SleepManage.Config) {
       messageAt: { $gte: startTime, $lte: endTime },
       from: `${platform}:${guildId}`
     }).execute(row => $.count(row.id))
+    session.$sleep.T = {
+      start: startTime,
+      end: endTime
+    }
 
     if (nowTime >= morningStart && nowTime <= morningEnd) {
       if (userLoggerToDay.length > 0) {
@@ -107,7 +112,7 @@ export function apply(ctx: Context, config: SleepManage.Config) {
         session.$sleep.calcTime = nowTime - userLoggerBefore[userLoggerBefore.length - 1].messageAt
       }
 
-      if (config.morningWord.includes(content) || (config.firstMorning && session.user.sleeping)) {
+      if (config.morningWord.includes(content) || (session.user[SleepManage.User.FirstMorning] && session.user[SleepManage.User.Sleeping])) {
         session.$sleep.now = nowTime
         session.$sleep.startT = morningStart
         session.$sleep.endT = morningEnd

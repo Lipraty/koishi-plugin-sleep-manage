@@ -1,4 +1,4 @@
-import { Command, Context } from "koishi"
+import { $, Command, Context } from "koishi"
 import { SleepManage } from "./types"
 import { genUTCHours, getTimeByTZ, timerFormat } from "./utils"
 
@@ -7,9 +7,6 @@ export function apply(ctx: Context, config: SleepManage.Config) {
 
   const root = ctx.command('sleep')
     .option('timezone', '-t <tz:number>')
-    .option('week', '-w')
-    .option('month', '-m')
-    .option('year', '-y')
     .userFields(['id', SleepManage.User.TimeZone, SleepManage.User.EveningCount, SleepManage.User.Sleeping])
     .action(async ({ session, options }) => {
       if (options.timezone >= -12 || options.timezone <= 12) {
@@ -20,6 +17,24 @@ export function apply(ctx: Context, config: SleepManage.Config) {
       if (Object.keys(options).length <= 0) {
 
       }
+    })
+
+  root.subcommand('.auto')
+    .userFields([SleepManage.User.FirstMorning])
+    .action(async ({ session }) => {
+      session.user[SleepManage.User.FirstMorning] = true
+      session.send(session.text('.done', [config.kuchiguse]))
+    })
+
+  ctx.guild().command('sleep.rank')
+    .action(async ({ session }) => {
+      const { T } = session.$sleep
+      const { platform, guildId } = session
+      const rank = await ctx.database.select('sleep_manage_v2', {
+        messageAt: { $gte: T.start, $lte: T.end },
+        from: `${platform}:${guildId}`
+      }).execute(row => $.count(row.id))
+      session.send(session.text('.rank', [config.kuchiguse, rank]))
     })
 
   withTriggerByMiddleCommand(root, 'morning', config, true)

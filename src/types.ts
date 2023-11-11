@@ -8,6 +8,7 @@ declare module 'koishi' {
     [SleepManage.User.TimeZone]: number
     [SleepManage.User.EveningCount]: number
     [SleepManage.User.Sleeping]: boolean
+    [SleepManage.User.FirstMorning]: boolean
   }
 
   interface Session {
@@ -50,6 +51,10 @@ export namespace SleepManage {
     period: Period
     startT: number
     endT: number
+    T: {
+      start: number
+      end: number
+    }
     calcTime: number
     rank?: number
   }
@@ -57,7 +62,8 @@ export namespace SleepManage {
   export const enum User {
     TimeZone = 'timezone',
     EveningCount = 'eveningCount',
-    Sleeping = 'sleeping'
+    Sleeping = 'sleeping',
+    FirstMorning = 'firstMorning',
   }
 
   export type DKeys = keyof Database
