@@ -24,12 +24,12 @@ export namespace SleepManage {
     interval: number
     timezone: true | number
     command: boolean
-    morning: boolean
-    toomany: number
+    firstMorning: boolean
+    multiTrigger: number
     morningSpan: number[]
     eveningSpan: number[]
-    morningPet: string[]
-    eveningPet: string[]
+    morningWord: string[]
+    eveningWord: string[]
   }
 
   export interface Database {
