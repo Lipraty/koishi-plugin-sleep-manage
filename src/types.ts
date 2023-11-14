@@ -9,6 +9,7 @@ declare module 'koishi' {
     [SleepManage.User.EveningCount]: number
     [SleepManage.User.Sleeping]: boolean
     [SleepManage.User.FirstMorning]: boolean
+    [SleepManage.User.Gag]: boolean
   }
 
   interface Session {
@@ -24,7 +25,7 @@ export namespace SleepManage {
     kuchiguse: string
     interval: number
     timezone: true | number
-    command: boolean
+    gagme: boolean
     firstMorning: boolean
     multiTrigger: number
     morningSpan: number[]
@@ -64,12 +65,13 @@ export namespace SleepManage {
     EveningCount = 'eveningCount',
     Sleeping = 'sleeping',
     FirstMorning = 'firstMorning',
+    Gag = 'gagme',
   }
 
   export type DKeys = keyof Database
 }
 
-export type Period = 'morning' | 'evening'
+export type Period = 'morning' | 'evening' | 'evening-gag'
 
 export interface TimeSpan {
   morningStart: number

@@ -1,4 +1,4 @@
-import { $, Command, Context } from "koishi"
+import { $, Bot, Command, Context } from "koishi"
 import { SleepManage } from "./types"
 import { genUTCHours, getTimeByTZ, timerFormat } from "./utils"
 
@@ -26,6 +26,15 @@ export function apply(ctx: Context, config: SleepManage.Config) {
       session.send(session.text('.done', [config.kuchiguse]))
     })
 
+  root.subcommand('.gagme')
+    .option('off', '-x')
+    .option('on', '-o')
+    .userFields([SleepManage.User.Gag])
+    .action(async ({ session }) => {
+      session.user[SleepManage.User.Gag] = true
+      session.send(session.text('.done', [config.kuchiguse]))
+    })
+
   ctx.guild().command('sleep.rank')
     .action(async ({ session }) => {
       const { T } = session.$sleep
@@ -43,7 +52,6 @@ export function apply(ctx: Context, config: SleepManage.Config) {
       session.user[SleepManage.User.EveningCount] = 0
 
       session.$sleep.period = 'morning'
-      session.$sleep.calcTime = 0
     })
 
   withTriggerByMiddleCommand(root, 'evening', config, true)
@@ -51,8 +59,13 @@ export function apply(ctx: Context, config: SleepManage.Config) {
       session.user[SleepManage.User.Sleeping] = true
       session.user[SleepManage.User.EveningCount]++
 
-      session.$sleep.period = 'evening'
-      session.$sleep.calcTime = 0
+      if (session.user[SleepManage.User.Gag]){
+        // mute 6 hours
+        await session.bot.muteGuildMember(session.guildId, session.userId, 21600, 'sleep-manage: gag!')
+        session.$sleep.period = 'evening-gag'
+      } else {
+        session.$sleep.period = 'evening'
+      }
     })
 }
 

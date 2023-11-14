@@ -20,10 +20,11 @@ export function apply(ctx: Context, config: SleepManage.Config) {
   ctx.i18n.define('zh', require('./locales/zh-cn'))
   //#region Database
   ctx.model.extend('user', {
-    timezone: 'integer(2)',
-    eveningCount: 'integer(2)',
-    sleeping: { type: 'boolean', initial: false },
-    firstMorning: { type: 'boolean', initial: config.firstMorning }
+    [SleepManage.User.TimeZone]: 'integer(2)',
+    [SleepManage.User.EveningCount]: 'integer(2)',
+    [SleepManage.User.Sleeping]: { type: 'boolean', initial: false },
+    [SleepManage.User.FirstMorning]: { type: 'boolean', initial: config.firstMorning },
+    [SleepManage.User.Gag]: { type: 'boolean', initial: config.gagme }
   })
   ctx.model.extend('sleep_manage_v2', {
     id: 'unsigned',
@@ -70,7 +71,7 @@ export function apply(ctx: Context, config: SleepManage.Config) {
     }, 43200000)
   })
 
-  if (config.command) ctx.plugin(Commander, config)
+  ctx.plugin(Commander, config)
 
   function getData(uid: number, start: number, end: number): Promise<Pick<SleepManage.Database, Keys<SleepManage.Database, any>>[]> {
     return ctx.database.get('sleep_manage_v2', {
@@ -79,8 +80,7 @@ export function apply(ctx: Context, config: SleepManage.Config) {
     })
   }
 
-  ctx.middleware(async (session: Session<SleepManage.User | 'id'>, next) => {
-    const { content, isDirect, platform, guildId } = session
+  ctx.middleware(async ({ content, isDirect, platform, guildId, user, $sleep, sleepField, execute }: Session<SleepManage.User | 'id'>, next) => {
     const nowTime = getTimeByTZ(config.timezone === true ? new Date().getTimezoneOffset() / -60 : config.timezone).getTime()
     const {
       morningStart, morningEnd,
@@ -92,55 +92,55 @@ export function apply(ctx: Context, config: SleepManage.Config) {
       eveningStart: config.eveningSpan[0],
       eveningEnd: config.eveningSpan[1],
     })
-    const userLoggerBefore: SleepManage.Database[] = await getData(session.user.id, reduceDay(startTime), reduceDay(endTime))
-    const userLoggerToDay: SleepManage.Database[] = await getData(session.user.id, startTime, endTime)
+    const userLoggerBefore: SleepManage.Database[] = await getData(user.id, reduceDay(startTime), reduceDay(endTime))
+    const userLoggerToDay: SleepManage.Database[] = await getData(user.id, startTime, endTime)
 
-    session.$sleep.first = userLoggerBefore.length <= 0
-    session.$sleep.rank = isDirect ? -1 : await ctx.database.select('sleep_manage_v2', {
+    $sleep.first = userLoggerBefore.length <= 0
+    $sleep.rank = isDirect ? -1 : await ctx.database.select('sleep_manage_v2', {
       messageAt: { $gte: startTime, $lte: endTime },
       from: `${platform}:${guildId}`
     }).execute(row => $.count(row.id))
-    session.$sleep.T = {
+    $sleep.T = {
       start: startTime,
       end: endTime
     }
 
     if (nowTime >= morningStart && nowTime <= morningEnd) {
       if (userLoggerToDay.length > 0) {
-        session.$sleep.calcTime = nowTime - userLoggerToDay[0].messageAt
+        $sleep.calcTime = nowTime - userLoggerToDay[0].messageAt
       } else {
-        session.$sleep.calcTime = nowTime - userLoggerBefore[userLoggerBefore.length - 1].messageAt
+        $sleep.calcTime = nowTime - userLoggerBefore[userLoggerBefore.length - 1].messageAt
       }
 
-      if (config.morningWord.includes(content) || (session.user[SleepManage.User.FirstMorning] && session.user[SleepManage.User.Sleeping])) {
-        session.$sleep.now = nowTime
-        session.$sleep.startT = morningStart
-        session.$sleep.endT = morningEnd
+      if (config.morningWord.includes(content) || (user[SleepManage.User.FirstMorning] && user[SleepManage.User.Sleeping])) {
+        $sleep.now = nowTime
+        $sleep.startT = morningStart
+        $sleep.endT = morningEnd
         const lastEveningTimes = userLoggerBefore
           .filter(v => v.messageAt >= reduceDay(eveningStart) && v.messageAt <= reduceDay(eveningEnd))
           .sort((a, b) => b.messageAt - a.messageAt)
         if (lastEveningTimes[0].messageAt >= reduceDay(eveningStart) && lastEveningTimes[0].messageAt <= reduceDay(eveningEnd)) {
-          session.$sleep.calcTime = nowTime - lastEveningTimes[0].messageAt
+          $sleep.calcTime = nowTime - lastEveningTimes[0].messageAt
         }
-        await session.execute(`sleep.morning`)
+        await execute(`sleep.morning`)
       }
     } else if (nowTime >= eveningStart && nowTime <= eveningEnd) {
       if (config.eveningWord.includes(content)) {
-        session.$sleep.now = nowTime
-        session.$sleep.startT = eveningStart
-        session.$sleep.endT = eveningEnd
+        $sleep.now = nowTime
+        $sleep.startT = eveningStart
+        $sleep.endT = eveningEnd
         if (userLoggerToDay.length > 0) {
-          session.$sleep.calcTime = nowTime - userLoggerToDay[0].messageAt
+          $sleep.calcTime = nowTime - userLoggerToDay[0].messageAt
         }
-        await session.execute(`sleep.evening`)
+        await execute(`sleep.evening`)
       }
     } else {
       // TODO
       return next()
     }
 
-    session.sleepField.time = nowTime
-    session.sleepField.save = true
+    sleepField.time = nowTime
+    sleepField.save = true
   })
 
   ctx.middleware(async ({ sleepField }) => {
@@ -150,7 +150,7 @@ export function apply(ctx: Context, config: SleepManage.Config) {
 
 export const Config: Schema<SleepManage.Config> = Schema.object({
   kuchiguse: Schema.string().default('喵').description('谜之声Poi~'),
-  command: Schema.boolean().default(false).description('是否启用指令喵').hidden(),
+  gagme: Schema.boolean().default(false).description('给晚安的用户一个口球喵'),
   timezone: Schema.union([
     Schema.number().min(-12).max(12).description('自定义喵'),
     Schema.const(true).description('使用用户本机时区'),
