@@ -9,7 +9,7 @@ export const usage = require('fs').readFileSync(require.resolve('./usage.md'), '
 
 export const name = SleepManage.NAME
 
-export const using = ['database']
+export const inject = ['database']
 
 const reduceDay = (time: number) => time - 86400000
 
