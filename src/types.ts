@@ -1,83 +1,45 @@
-import { Observed } from "koishi"
-
-declare module 'koishi' {
-  interface Tables {
-    sleep_manage_v2: SleepManage.Database
-  }
-  interface User {
-    [SleepManage.User.TimeZone]: number
-    [SleepManage.User.EveningCount]: number
-    [SleepManage.User.Sleeping]: boolean
-    [SleepManage.User.FirstMorning]: boolean
-    [SleepManage.User.Gag]: boolean
-  }
-
-  interface Session {
-    sleepField: Observed<SleepManage.Fields>
-    $sleep: SleepManage.Session
-  }
-}
 
 export namespace SleepManage {
   export const NAME = 'sleep-manage'
-
+  export type TimeZone = `${0 | `${'+' | '-'}${1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12}`}`
   export interface Config {
-    kuchiguse: string
-    interval: number
-    timezone: true | number
-    gagme: boolean
-    firstMorning: boolean
+    tolerance: number
     multiTrigger: number
+  }
+  export const enum UserKey {
+    Timezone = 'sm_timezone',
+    FirstWake = 'sm_first_wake',
+    LastSleep = 'sm_last_sleep',
+    Gag = 'sm_gagme',
+  }
+  export type AttachUserFields = UserKey.Timezone | UserKey.FirstWake | UserKey.LastSleep | UserKey.Gag
+}
+
+export namespace SleepManageCommand {
+  export interface Config {
+
+  }
+}
+
+export namespace SleepManageListener {
+  export interface Config {
+    gagme: boolean
     morningSpan: number[]
     eveningSpan: number[]
     morningWord: string[]
     eveningWord: string[]
   }
-
-  export interface Database {
-    id: number          //记录ID
-    uid: number         //用户ID
-    messageAt: number   //消息时间
-    from: string        //消息来源: platfrom:guildId (if platform is private, guildId is user id)
+  export interface RecordDatabase {
+    id: number
+    uid: number
+    sleep_at: Date
+    wake_at: Date
+    duration: number
+    from: string // platform:guildId (if platform is private, guildId is user id)
+    created_at: Date
   }
-
-  export type Fields = Pick<SleepManage.Database, 'uid' | 'from'> & {
-    save: boolean
-    time?: number
+  export const enum TriggerPeriod {
+    MORNING = 'morning',
+    EVENING = 'evening',
   }
-
-  export interface Session {
-    now: number
-    first: boolean
-    period: Period
-    startT: number
-    endT: number
-    T: {
-      start: number
-      end: number
-    }
-    calcTime: number
-    rank?: number
-  }
-
-  export const enum User {
-    TimeZone = 'timezone',
-    EveningCount = 'eveningCount',
-    Sleeping = 'sleeping',
-    FirstMorning = 'firstMorning',
-    Gag = 'gagme',
-  }
-
-  export type DKeys = keyof Database
-}
-
-export type Period = 'morning' | 'evening' | 'evening-gag'
-
-export interface TimeSpan {
-  morningStart: number
-  morningEnd: number
-  eveningStart: number
-  eveningEnd: number
-  start: number
-  end: number
 }
