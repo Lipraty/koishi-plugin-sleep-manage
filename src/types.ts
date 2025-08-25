@@ -16,16 +16,16 @@ declare module 'koishi' {
 }
 
 export interface Config {
-  kuchiguse: string
-  interval: number
+  suffix: string
+  cooldown: number
   timezone: true | number
-  gagme: boolean
-  firstMorning: boolean
-  multiTrigger: number
-  morningSpan: number[]
-  eveningSpan: number[]
-  morningTrigger: string[]
-  eveningTrigger: string[]
+  autoGag: boolean
+  recordFirst: boolean
+  maxMulti: number
+  morningRange: number[]
+  eveningRange: number[]
+  morningWords: string[]
+  eveningWords: string[]
 }
 
 export type SMPick = 'sm_timezone' | 'sm_state' | 'sm_lastTransition' | 'sm_lastSleep' | 'sm_lastWake'

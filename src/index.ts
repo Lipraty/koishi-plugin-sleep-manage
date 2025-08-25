@@ -9,26 +9,26 @@ export const name = 'sleep-manage'
 export const inject = ['database']
 
 export const Config: Schema<TConfig> = Schema.object({
-  kuchiguse: Schema.string().default(SleepManageDefault.Kuchiguse),
-  gagme: Schema.boolean().default(SleepManageDefault.Gagme),
+  suffix: Schema.string().default(SleepManageDefault.Suffix),
+  autoGag: Schema.boolean().default(SleepManageDefault.AutoGag),
   timezone: Schema.union([
     Schema.number().min(-12).max(12),
     Schema.const(true),
   ]).default(SleepManageDefault.Timezone),
-  interval: Schema.number().min(0).max(6).default(SleepManageDefault.Interval),
-  firstMorning: Schema.boolean().default(SleepManageDefault.FirstMorning),
-  multiTrigger: Schema.number().min(3).max(114514).default(SleepManageDefault.MultiTrigger),
-  morningSpan: Schema.tuple([Schema.number().min(0).max(12), Schema.number().min(0).max(12)]).default(SleepManageDefault.MorningSpan),
-  eveningSpan: Schema.tuple([Schema.number().min(12).max(23), Schema.number().min(0).max(23)]).default(SleepManageDefault.EveningSpan),
-  morningTrigger: Schema.array(String).default(SleepManageDefault.MorningWord),
-  eveningTrigger: Schema.array(String).default(SleepManageDefault.EveningWord),
+  cooldown: Schema.number().min(0).max(6).default(SleepManageDefault.Cooldown),
+  recordFirst: Schema.boolean().default(SleepManageDefault.RecordFirst),
+  maxMulti: Schema.number().min(3).max(114514).default(SleepManageDefault.MaxMulti),
+  morningRange: Schema.tuple([Schema.number().min(0).max(12), Schema.number().min(0).max(12)]).default(SleepManageDefault.MorningRange),
+  eveningRange: Schema.tuple([Schema.number().min(12).max(23), Schema.number().min(0).max(23)]).default(SleepManageDefault.EveningRange),
+  morningWords: Schema.array(String).default(SleepManageDefault.MorningWords),
+  eveningWords: Schema.array(String).default(SleepManageDefault.EveningWords),
 })
 
 export function apply(ctx: Context, config: TConfig) {
   const isMorning = (content: string) =>
-    config.morningTrigger.includes(content)
+    config.morningWords.includes(content)
   const isEvening = (content: string) =>
-    config.eveningTrigger.includes(content)
+    config.eveningWords.includes(content)
   const stateMachine = createStateMachine(ctx, config)
 
   ctx.model.extend('user', {
@@ -100,7 +100,7 @@ const createStateMachine = (ctx: Context, config: TConfig) => {
       [is('MORNING_TRIGGER'), () => {
         const userLocalTime = toUserLocalTime(new Date(), context.timezone)
 
-        if (!isInTimeRange(config.morningSpan as [number, number], userLocalTime)) {
+        if (!isInTimeRange(config.morningRange as [number, number], userLocalTime)) {
           return {
             success: false,
             context,
@@ -157,7 +157,7 @@ const createStateMachine = (ctx: Context, config: TConfig) => {
       [is('EVENING_TRIGGER'), () => {
         const userLocalTime = toUserLocalTime(new Date(), context.timezone)
 
-        if (!isInTimeRange(config.eveningSpan as [number, number], userLocalTime)) {
+        if (!isInTimeRange(config.eveningRange as [number, number], userLocalTime)) {
           return {
             success: false,
             context,
@@ -169,7 +169,7 @@ const createStateMachine = (ctx: Context, config: TConfig) => {
 
         // reduction
         const timeLast = Date.now() - context.lastTransition.getTime()
-        if (timeLast < config.interval * 60 * 60 * 1000) {
+        if (timeLast < config.cooldown * 60 * 60 * 1000) {
           return {
             success: false,
             context,
