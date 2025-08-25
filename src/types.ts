@@ -1,45 +1,70 @@
+import { Element } from "koishi"
 
-export namespace SleepManage {
-  export const NAME = 'sleep-manage'
-  export type TimeZone = `${0 | `${'+' | '-'}${1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12}`}`
-  export interface Config {
-    tolerance: number
-    multiTrigger: number
+declare module 'koishi' {
+  interface User {
+    sm_timezone: Timezone
+    sm_state: SleepState
+    sm_lastTransition: Date
+    sm_lastSleep: Date
+    sm_lastWake: Date
+    sm_gag: boolean
   }
-  export const enum UserKey {
-    Timezone = 'sm_timezone',
-    FirstWake = 'sm_first_wake',
-    LastSleep = 'sm_last_sleep',
-    Gag = 'sm_gagme',
-  }
-  export type AttachUserFields = UserKey.Timezone | UserKey.FirstWake | UserKey.LastSleep | UserKey.Gag
-}
 
-export namespace SleepManageCommand {
-  export interface Config {
-
+  interface Tables {
+    sleep_record: SleepRecord
   }
 }
 
-export namespace SleepManageListener {
-  export interface Config {
-    gagme: boolean
-    morningSpan: number[]
-    eveningSpan: number[]
-    morningWord: string[]
-    eveningWord: string[]
-  }
-  export interface RecordDatabase {
-    id: number
-    uid: number
-    sleep_at: Date
-    wake_at: Date
-    duration: number
-    from: string // platform:guildId (if platform is private, guildId is user id)
-    created_at: Date
-  }
-  export const enum TriggerPeriod {
-    MORNING = 'morning',
-    EVENING = 'evening',
-  }
+export interface Config {
+  kuchiguse: string
+  interval: number
+  timezone: true | number
+  gagme: boolean
+  firstMorning: boolean
+  multiTrigger: number
+  morningSpan: number[]
+  eveningSpan: number[]
+  morningTrigger: string[]
+  eveningTrigger: string[]
 }
+
+export type SMPick = 'sm_timezone' | 'sm_state' | 'sm_lastTransition' | 'sm_lastSleep' | 'sm_lastWake'
+
+export type SleepState = 'AWAKE' | 'SLEEPING' | 'JUST_WOKE_UP' | 'JUST_SLEPT'
+export type StateEvent = 'MORNING_TRIGGER' | 'EVENING_TRIGGER' | 'TIME_UPDATE'
+export type StateAction =
+  | { type: 'UPDATE_RECORD', record: Partial<SleepRecord> }
+  | { type: 'SEND_MESSAGE', message: Element.Fragment }
+  | { type: 'SET_GAG', until: number }
+  | { type: 'RELEASE_GAG', }
+export type StateActionByType<T> = Extract<StateAction, { type: T }>
+
+export interface StateContext {
+  userId: number
+  currentState: SleepState
+  timezone: Timezone
+  lastTransition: Date
+  lastSleepTime: Date | null
+  lastWakeTime: Date | null
+}
+
+export interface TransitionResult {
+  success: boolean
+  fromState: SleepState
+  toState: SleepState
+  context: StateContext
+  actions: StateAction[]
+}
+
+export interface SleepRecord {
+  id: number
+  userId: number
+  sleepTime: Date
+  wakeTime: Date | null
+  duration: number | null
+  quality: number | null
+  platform: string
+  createdAt: Date
+}
+
+export type Timezone = 'UTC' | 'LOCAL' | `-${number}` | `+${number}`

@@ -5,7 +5,7 @@
 
 <div align="center">
 
-# [Koishi](https://koishi.chat) Plugin: Sleep-Manage
+# [Koishi Plugin](https://koishi.chat): Sleep-Manage
 
 _🎈 Manage your sleep time with Koishi Bot! 🎈_
 
@@ -27,7 +27,7 @@ Or in your terminal:
 yarn add koishi-plugin-sleep-manage
 # or use npm:
 npm i koishi-plugin-sleep-manage
-## or use koishi desktop terminal(unsafe, may cause you can't get help from the qq group):
+## or use koishi desktop terminal:
 koi yarn -n default add koishi-plugin-sleep-manage
 ```
 
@@ -39,7 +39,7 @@ Just like communicating with a human, say hello to the Bot!
 
 - `早安` - Say good morning to the Bot indicating that you are awake.
 - `晚安` - Say good night to the Bot indicating that you are asleep.
-  
+
 > You can also use other words as triggers, there are several related configuration in the config page of the plugin.
 
 ### Commands

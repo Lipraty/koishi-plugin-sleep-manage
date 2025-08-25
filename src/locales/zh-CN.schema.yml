@@ -1,0 +1,11 @@
+$inner:
+  kuchiguse: 谜之声Poi~
+  gagme: 给晚安的用户一个口球喵
+  timezone: 时区喵
+  interval: 在这个时长内都是重复的喵
+  firstMorning: 将早安时间内的第一条消息视为早安
+  multiTrigger: 真的重复晚安太多了喵，要骂人了喵！
+  morningSpan: 早安 响应时间范围喵
+  eveningSpan: 晚安 响应时间范围喵
+  morningWord: 人家会响应这些早安消息哦！
+  eveningWord: 人家会响应这些晚安消息哦！
