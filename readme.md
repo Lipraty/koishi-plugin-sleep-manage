@@ -33,12 +33,14 @@ koi yarn -n default add koishi-plugin-sleep-manage
 
 ## 🎮Usage
 
-Just like communicating with a human, say hello to the Bot!
+Just like communicating with a human, say `Good morning` to the Bot!
 
 ### Triggers
 
 - `早安` - Say good morning to the Bot indicating that you are awake.
 - `晚安` - Say good night to the Bot indicating that you are asleep.
+
+[See more triggers](./src/default.ts)
 
 > You can also use other words as triggers, there are several related configuration in the config page of the plugin.
 
@@ -46,9 +48,9 @@ Just like communicating with a human, say hello to the Bot!
 
 `sleep` - Show the command helper.
 
-`sleep.timezone` - Set your own timezone instead of the default one. (e.g. `+8` for UTC +0800)
+`sleep.timezone [Timezone]` - Set your own timezone instead of the default one. (e.g. `+8` for UTC +0800)
 
-(WIP) `sleep.sleep` - Set the time for bed. (e.g. 23:00) if you are still chating, the bot will remind you to go to bed.
+`sleep.sleep [Time]` - Set the time for bed. (e.g. 23:00) if you are still chating, the bot will remind you to go to bed.
 
 `sleep.auto` - Set whether to automatically regard your first message in a day as the `good morning` trigger.
 
@@ -60,16 +62,15 @@ Just like communicating with a human, say hello to the Bot!
 
 ## 🔧 Config
 
-- `kuchiguse` : Suffix phrase adding to every sentence the Bot saying.
-- ~~`command`: Prefix for every commands, default is `sleep`.~~
+- `suffix` : Suffix phrase adding to every sentence the Bot saying.
 - `timezone` : Default timezone.
-- `interval` : Set amount of time to supress trigger greetings.
-- `firstMorning`: Set whether to automatically regard everyone's first message in a day as the `good morning` trigger.
-- `multiTrigger`: Set whether to respond user triggers multiple times in `interval` amount of time.
-- `morningSpan`: Morning trigger time span.
-- `eveningSpan`: Evening trigger time span.
-- `morningWord`: Response word of morning.
-- `eveningWord`: Response word of evening.
+- `cooldown` : Set amount of time to supress trigger greetings.
+- `recordFirst`: Set whether to automatically regard everyone's first message in a day as the `good morning` trigger.
+- `maxMulti`: Set whether to respond user triggers multiple times in `cooldown` amount of time.
+- `morningRange`: Morning trigger time range.
+- `eveningRange`: Evening trigger time range.
+- `morningWords`: Response words of morning.
+- `eveningWords`: Response words of evening.
 
 ## 🥰 Thanks
 
