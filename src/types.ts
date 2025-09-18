@@ -54,6 +54,7 @@ export interface TransitionResult {
   toState: SleepState
   context: StateContext
   actions: StateAction[]
+  update?: Partial<SleepRecord>
 }
 
 export interface SleepRecord {

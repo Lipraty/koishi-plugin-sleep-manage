@@ -20,8 +20,8 @@ export const Config: Schema<TConfig> = Schema.object({
   maxMulti: Schema.number().min(3).max(114514).default(SleepManageDefault.MaxMulti),
   morningRange: Schema.tuple([Schema.number().min(0).max(12), Schema.number().min(0).max(12)]).default(SleepManageDefault.MorningRange),
   eveningRange: Schema.tuple([Schema.number().min(12).max(23), Schema.number().min(0).max(23)]).default(SleepManageDefault.EveningRange),
-  morningWords: Schema.array(String).default(SleepManageDefault.MorningWords),
-  eveningWords: Schema.array(String).default(SleepManageDefault.EveningWords),
+  morningWords: Schema.array(String).default(SleepManageDefault.MorningWords).collapse(),
+  eveningWords: Schema.array(String).default(SleepManageDefault.EveningWords).collapse(),
 })
 
 export function apply(ctx: Context, config: TConfig) {
@@ -90,11 +90,32 @@ export function apply(ctx: Context, config: TConfig) {
     ])(content)
   })
 
+  ctx.setInterval(async () => {
+    const justUsers = await ctx.database.get('user', {
+      $or: [
+        { sm_state: 'JUST_SLEPT' },
+        { sm_state: 'JUST_WOKE_UP' },
+      ],
+    })
 
+    for (const user of justUsers) {
+      const transRange = Date.now() - user.sm_lastTransition.getTime()
+      if (transRange > config.cooldown * 60 * 1000) {
+        stateMachine('TIME_UPDATE', {
+          userId: user.id,
+          timezone: user.sm_timezone,
+          currentState: user.sm_state,
+          lastTransition: user.sm_lastTransition,
+          lastSleepTime: user.sm_lastSleep,
+          lastWakeTime: user.sm_lastWake,
+        })
+      }
+    }
+  }, 5 * 60 * 1000) // 5 minutes
 }
 
 const createStateMachine = (ctx: Context, config: TConfig) => {
-  return async (event: StateEvent, context: StateContext, session: Session<'id' | SMPick>) => {
+  return async (event: StateEvent, context: StateContext, session?: Session<'id' | SMPick>) => {
     // rule handle
     const result = cond<StateEvent, TransitionResult>([
       [is('MORNING_TRIGGER'), () => {
@@ -222,6 +243,42 @@ const createStateMachine = (ctx: Context, config: TConfig) => {
           }
         }
       }],
+      [is('TIME_UPDATE'), () => {
+        if (context.currentState === 'JUST_SLEPT') {
+          return {
+            success: true,
+            context: {
+              ...context,
+              currentState: 'SLEEPING'
+            },
+            fromState: 'JUST_SLEPT',
+            toState: 'SLEEPING',
+            actions: [],
+          }
+        }
+
+        if (context.currentState === 'JUST_WOKE_UP') {
+          return {
+            success: true,
+            context: {
+              ...context,
+              currentState: 'AWAKE'
+            },
+            fromState: 'JUST_WOKE_UP',
+            toState: 'AWAKE',
+            actions: [],
+          }
+        }
+
+        // no update
+        return {
+          success: false,
+          context,
+          fromState: context.currentState,
+          toState: context.currentState,
+          actions: []
+        }
+      }]
     ])(event)
 
     // state transition
@@ -236,7 +293,7 @@ const createStateMachine = (ctx: Context, config: TConfig) => {
     }
 
     for (const action of result.actions) {
-      await handleAction(ctx, action, context, session)
+      await handleAction(ctx, action, context, session!)
     }
   }
 }
