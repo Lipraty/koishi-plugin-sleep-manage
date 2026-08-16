@@ -1,0 +1,69 @@
+name: Publish
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  publish:
+    if: |
+      !contains(github.event.head_commit.message, '[skip ci]') &&
+      !contains(github.event.head_commit.message, '[ci skip]')
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: write
+
+    steps:
+      - name: Check out Buildplate
+        uses: actions/checkout@v4
+        with:
+          repository: koikirin/buildplate
+
+      - name: Check out source
+        uses: actions/checkout@v4
+        with:
+          path: external/sleep-manage
+          token: ${{ secrets.GITHUB_TOKEN }}
+          fetch-depth: 0
+
+      - name: Get version from tag
+        id: version
+        run: echo "version=${GITHUB_REF#refs/tags/v}" >> $GITHUB_OUTPUT
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          registry-url: 'https://registry.npmjs.org'
+
+      - name: Install
+        run: |
+          yarn --no-immutable
+          yarn yakumo prepare
+          yarn yakumo resolution
+          yarn --no-immutable
+
+      - name: Update version
+        run: yarn bump sleep-manage -v ${{ steps.version.outputs.version }}
+
+      - name: Commit and push
+        run: |
+          DEFAULT_BRANCH="${{ github.event.repository.default_branch }}"
+          git -C external/sleep-manage config user.email "github-actions[bot]@users.noreply.github.com"
+          git -C external/sleep-manage config user.name "github-actions[bot]"
+          git -C external/sleep-manage fetch origin "${DEFAULT_BRANCH}"
+          git -C external/sleep-manage checkout -B "${DEFAULT_BRANCH}" "origin/${DEFAULT_BRANCH}"
+          git -C external/sleep-manage add package.json
+          git -C external/sleep-manage commit -m "bump version ${{ steps.version.outputs.version }}"
+          git -C external/sleep-manage push origin "HEAD:refs/heads/${DEFAULT_BRANCH}"
+
+      - name: Check visibility
+        if: github.event.repository.private == true
+        run: yarn config set npmPublishProvenance false
+
+      - name: Build
+        run: yarn build
+
+      - name: Publish
+        run: yarn pub --debug

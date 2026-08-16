@@ -5,6 +5,9 @@
   "main": "lib/index.js",
   "typings": "lib/index.d.ts",
   "repository": "https://github.com/Lipraty/koishi-plugin-sleep-manage",
+  "publishConfig": {
+    "registry": "https://registry.npmjs.org"
+  },
   "author": "Lipraty <i@lonay.me>",
   "files": [
     "lib",
@@ -23,6 +26,7 @@
   },
   "scripts": {
     "build": "koishi-scripts build",
+    "lint": "node ../../node_modules/typescript/bin/tsc -p tsconfig.test.json",
     "test": "node ../../node_modules/typescript/bin/tsc -p tsconfig.test.json && node --import tsx --import yml-register --test test/*.test.ts"
   },
   "devDependencies": {

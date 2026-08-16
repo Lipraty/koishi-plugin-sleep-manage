@@ -1,0 +1,34 @@
+name: Lint
+
+on:
+  push:
+  pull_request:
+    branches: [master]
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out Buildplate
+        uses: actions/checkout@v4
+        with:
+          repository: koikirin/buildplate
+
+      - name: Check out source
+        uses: actions/checkout@v4
+        with:
+          path: external/sleep-manage
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+
+      - name: Install
+        run: |
+          yarn --no-immutable
+          yarn yakumo prepare
+          yarn yakumo resolution
+          yarn --no-immutable
+
+      - name: Lint
+        run: yarn yakumo run sleep-manage -- lint
