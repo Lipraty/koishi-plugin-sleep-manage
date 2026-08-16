@@ -55,8 +55,12 @@ jobs:
           git -C external/sleep-manage fetch origin "${DEFAULT_BRANCH}"
           git -C external/sleep-manage checkout -B "${DEFAULT_BRANCH}" "origin/${DEFAULT_BRANCH}"
           git -C external/sleep-manage add package.json
-          git -C external/sleep-manage commit -m "bump version ${{ steps.version.outputs.version }}"
-          git -C external/sleep-manage push origin "HEAD:refs/heads/${DEFAULT_BRANCH}"
+          if git -C external/sleep-manage diff --cached --quiet; then
+            echo "package version already up to date"
+          else
+            git -C external/sleep-manage commit -m "bump version ${{ steps.version.outputs.version }}"
+            git -C external/sleep-manage push origin "HEAD:refs/heads/${DEFAULT_BRANCH}"
+          fi
 
       - name: Check visibility
         if: github.event.repository.private == true
