@@ -11,6 +11,7 @@
     "strict": true,
     "skipLibCheck": true,
     "esModuleInterop": true,
+    "types": ["node", "yml-register/types"],
     "jsx": "react-jsx",
     "jsxImportSource": "@satorijs/element"
   },

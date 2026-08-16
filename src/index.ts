@@ -1,5 +1,7 @@
 import { Bot, Context, Fragment, Schema, Session } from 'koishi'
 
+import zhCN from './locales/zh-cn.yml'
+
 import {
   Config as SleepConfig,
   DomainEvent,
@@ -163,6 +165,7 @@ const sendFragment = (session: MiddlewareSession) => (fragment: Fragment): RTE<A
 export function apply(ctx: Context, config: Config, options: { now?: () => Date } = {}) {
   const getNow = () => options.now?.() ?? new Date()
   const repo = makeSqliteRepo(ctx.database)
+  ctx.i18n.define('zh-CN', zhCN)
   const appEnv: AppEnv = {
     repo,
     db: ctx.database,

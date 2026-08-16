@@ -23,7 +23,7 @@
   },
   "scripts": {
     "build": "koishi-scripts build",
-    "test": "node ../../node_modules/typescript/bin/tsc -p tsconfig.test.json && node --import tsx --test test/*.test.ts"
+    "test": "node ../../node_modules/typescript/bin/tsc -p tsconfig.test.json && node --import tsx --import yml-register --test test/*.test.ts"
   },
   "devDependencies": {
     "tsx": "^4.19.2",

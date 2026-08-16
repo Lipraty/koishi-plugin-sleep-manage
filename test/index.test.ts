@@ -126,6 +126,7 @@ const setup = async (config: Partial<Config> = {}, now: () => Date = () => new D
   const beforeHooks: Record<string, Function[]> = {}
   const intervals: Array<{ fn: Function; ms: number }> = []
   const muteCalls: Array<[string, string, number]> = []
+  const defined: Record<string, Record<string, unknown>> = {}
   const bots = [{
     platform: 'test',
     sent: [] as string[],
@@ -159,7 +160,9 @@ const setup = async (config: Partial<Config> = {}, now: () => Date = () => new D
       return {}
     },
     i18n: {
-      define: () => {},
+      define: (locale: string, data: Record<string, unknown>) => {
+        defined[locale] = data
+      },
       render: (_locales: string[], paths: string[]) => ['该睡了'],
     },
     logger: () => ({ warn: () => {} }),
@@ -237,6 +240,7 @@ const setup = async (config: Partial<Config> = {}, now: () => Date = () => new D
     beforeHooks,
     intervals,
     muteCalls,
+    defined,
     config: fullConfig,
     runMiddleware,
     reloadUser,
@@ -252,6 +256,20 @@ test('apply 注册 attach-user 字段', async () => {
     for (const key of ['id', 'sm_timezone', 'sm_bedtime', 'sm_recordFirst', 'sm_lastTrigger', 'sm_dayKey', 'sm_multiCount', 'sm_gagme', 'sm_gagUntil']) {
       assert.ok(fields.has(key), `attach-user 应包含 ${key}`)
     }
+  } finally {
+    await driver.stop()
+  }
+})
+
+test('apply 通过 ctx.i18n.define 注册 zh-CN 回复槽位', async () => {
+  const { defined, driver } = await setup()
+  try {
+    const sleep = defined['zh-CN']?.sleep as any
+    assert.ok(sleep, '应注册 zh-CN locale')
+    assert.ok(sleep.evening.frist, 'sleep.evening.frist 必须存在')
+    assert.ok(sleep.evening.count, 'sleep.evening.count 必须存在')
+    assert.ok(sleep.morning.timer, 'sleep.morning.timer 必须存在')
+    assert.ok(sleep.bedtimeReminder, 'sleep.bedtimeReminder 必须存在')
   } finally {
     await driver.stop()
   }
