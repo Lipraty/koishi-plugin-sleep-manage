@@ -1,20 +1,16 @@
 {
   "compilerOptions": {
-    "rootDir": "src",
-    "outDir": "lib",
     "target": "es2020",
     "module": "commonjs",
     "moduleResolution": "node",
-    "declaration": true,
-    "composite": true,
-    "incremental": true,
     "strict": true,
+    "noEmit": true,
     "skipLibCheck": true,
     "esModuleInterop": true,
-    "jsx": "react-jsx",
-    "jsxImportSource": "@satorijs/element"
+    "types": ["node"]
   },
   "include": [
-    "src"
+    "src",
+    "test"
   ]
 }

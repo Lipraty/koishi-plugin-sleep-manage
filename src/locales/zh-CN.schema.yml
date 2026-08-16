@@ -1,11 +1,12 @@
 $inner:
-  kuchiguse: 谜之声Poi~
-  gagme: 给晚安的用户一个口球喵
-  timezone: 时区喵
-  interval: 在这个时长内都是重复的喵
-  firstMorning: 将早安时间内的第一条消息视为早安
-  multiTrigger: 真的重复晚安太多了喵，要骂人了喵！
-  morningSpan: 早安 响应时间范围喵
-  eveningSpan: 晚安 响应时间范围喵
-  morningWord: 人家会响应这些早安消息哦！
-  eveningWord: 人家会响应这些晚安消息哦！
+  kuchiguse: 回复后缀（旧版 kuchiguse）
+  gagme: 全局默认禁言开关（旧版 gagme）
+  timezone: 默认时区；true 表示跟随服务器本地时区，数字表示 UTC 偏移
+  interval: 重复触发冷却窗口（小时）
+  firstMorning: 把每天第一条消息自动视为早安
+  multiTrigger: 冷却窗口内最多重复响应次数
+  gagMinutes: 禁言分钟数
+  morningSpan: 早安响应时间范围（小时）
+  eveningSpan: 晚安响应时间范围（小时，可跨天）
+  morningWord: 早安触发词
+  eveningWord: 晚安触发词
