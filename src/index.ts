@@ -396,7 +396,7 @@ export function apply(ctx: Context, config: Config, options: { now?: () => Date 
           durationMin: duration,
           rank,
           gagUntil: gagUntil(ctx),
-          muteUserId: session.userId,
+          muteUserId: session.userId ?? '',
         },
       ))),
       RTE.chain(({ result, decision }) => pipe(
