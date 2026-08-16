@@ -1,6 +1,6 @@
 import type { Effect } from './domain'
 
-export interface HKT<F, A> {}
+export interface HKT<_F, _A> {}
 
 export interface URItoKind<A> {
   readonly Option: Option<A>

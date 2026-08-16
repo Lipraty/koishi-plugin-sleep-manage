@@ -1,0 +1,51 @@
+import antfu from '@antfu/eslint-config'
+
+export default antfu({
+  ignores: [
+    '**/lib/**',
+    '**/dist/**',
+    '**/*.d.ts',
+    '**/node_modules/**',
+    '**/.pnp.*',
+    '**/.yarn/**',
+  ],
+  typescript: {
+    overrides: {
+      'no-console': 'off',
+      'prefer-template': 'off',
+      'regexp/no-unused-capturing-group': 'off',
+      'ts/ban-ts-comment': 'off',
+      'ts/consistent-type-definitions': 'off',
+      'ts/consistent-type-imports': 'off',
+      'ts/no-empty-object-type': 'off',
+      'ts/no-explicit-any': 'off',
+      'ts/no-namespace': 'off',
+      'ts/no-redeclare': 'off',
+      'ts/no-unsafe-function-type': 'off',
+      'ts/no-use-before-define': 'off',
+      'unicorn/prefer-number-properties': 'off',
+      'unused-imports/no-unused-vars': 'warn',
+    },
+  },
+  vue: false,
+  jsonc: false,
+  yaml: false,
+}, {
+  rules: {
+    'antfu/consistent-list-newline': 'off',
+    'antfu/if-newline': 'off',
+    'antfu/top-level-function': 'off',
+    'sort-imports': 'off',
+    'style/arrow-parens': 'off',
+    'style/brace-style': 'off',
+    'style/indent': 'off',
+    'style/max-statements-per-line': 'off',
+    'style/member-delimiter-style': 'off',
+    'style/multiline-ternary': 'off',
+    'style/no-multiple-empty-lines': 'off',
+    'style/no-trailing-spaces': 'off',
+    'style/padded-blocks': 'off',
+    'test/no-import-node-test': 'off',
+    'regexp/no-unused-capturing-group': 'off',
+  },
+})

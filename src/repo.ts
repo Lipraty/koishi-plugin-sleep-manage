@@ -83,7 +83,7 @@ const findOpenTask = (userId: UserId): RTE<DbEnv, RepoError, Option<SleepRecord>
     RTE.map(firstOf),
   )
 
-export const makeSqliteRepo = (db: Db): SleepRepo => {
+export const makeSqliteRepo = (_db: Db): SleepRepo => {
   const findOpen = (userId: UserId) => findOpenTask(userId)
 
   const phase = (userId: UserId): RTE<DbEnv, RepoError, Phase> =>
@@ -186,7 +186,7 @@ export const makeSqliteRepo = (db: Db): SleepRepo => {
   const latestClosed = (userId: UserId): RTE<DbEnv, RepoError, Option<SleepRecord>> =>
     pipe(
       query(({ db }) => db.get('sleep_record',
-        (row) => (row.wakeTime !== null) as never,
+        (row) => ((row.userId as never) === unUserId(userId) && (row.wakeTime as never) !== null) as never,
         { sort: { wakeTime: 'desc' }, limit: 1 })),
       RTE.map(firstOf),
     )

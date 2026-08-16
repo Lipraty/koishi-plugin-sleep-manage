@@ -26,10 +26,13 @@
   },
   "scripts": {
     "build": "koishi-scripts build",
-    "lint": "node ../../node_modules/typescript/bin/tsc -p tsconfig.test.json",
-    "test": "node ../../node_modules/typescript/bin/tsc -p tsconfig.test.json && node --import tsx --import yml-register --test test/*.test.ts"
+    "lint": "eslint .",
+    "test": "tsc -p tsconfig.test.json && node --import tsx --import yml-register --test test/*.test.ts"
   },
   "devDependencies": {
+    "@antfu/eslint-config": "^2.21.0",
+    "@types/node": "^22",
+    "eslint": "^9.0.0",
     "tsx": "^4.19.2",
     "typescript": "^5.7.2"
   },

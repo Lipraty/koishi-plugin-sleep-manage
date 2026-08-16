@@ -19,11 +19,11 @@ const kindRTE: Kind<'RTE', number> = RTE.of<never, never, number>(1)
 
 const userId: UserId = mkUserId(1)
 // @ts-expect-error 裸 number 不能冒充品牌化的 UserId
-const badUserId: UserId = 1
+const _badUserId: UserId = 1
 // @ts-expect-error 'GMT' 不是合法时区值
-const badTimezone: Timezone = 'GMT'
+const _badTimezone: Timezone = 'GMT'
 // @ts-expect-error 'typo' 不在 ReplySlot 联合中
-const badSlot: ReplySlot = 'typo'
+const _badSlot: ReplySlot = 'typo'
 
 const timestamp: Timestamp = new Date() as Timestamp
 const duration = mkDurationMin(480)
@@ -43,7 +43,7 @@ const openEffect: EffectByKind<'OPEN_RECORD'> = {
   at: timestamp,
   from: 'private',
 }
-const badEffect: EffectByKind<'OPEN_RECORD'> = {
+const _badEffect: EffectByKind<'OPEN_RECORD'> = {
   _tag: 'OPEN_RECORD',
   userId,
   at: timestamp,

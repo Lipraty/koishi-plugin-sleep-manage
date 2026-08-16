@@ -163,7 +163,7 @@ const setup = async (config: Partial<Config> = {}, now: () => Date = () => new D
       define: (locale: string, data: Record<string, unknown>) => {
         defined[locale] = data
       },
-      render: (_locales: string[], paths: string[]) => ['该睡了'],
+      render: (_locales: string[], _paths: string[]) => ['该睡了'],
     },
     logger: () => ({ warn: () => {} }),
     bots,

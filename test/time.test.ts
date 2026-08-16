@@ -1,8 +1,8 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
 
-import { mkDurationMin, mkTimestamp, Timezone, unTimestamp } from '../src/domain'
-import { fromNullable, isRight, left, none, right, some } from '../src/fp'
+import { mkDurationMin, Timezone, unTimestamp } from '../src/domain'
+import { fromNullable, none, right, some } from '../src/fp'
 import {
   formatDuration,
   isInTimeRange,

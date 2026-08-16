@@ -13,10 +13,8 @@ import {
   mkTimestamp,
   mkUserId,
   morningTrigger,
-  Phase,
   privateSource,
   sleeping,
-  Timestamp,
   transition,
 } from '../src/domain'
 import { none, some } from '../src/fp'
