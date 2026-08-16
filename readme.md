@@ -93,15 +93,15 @@ Let $R$ be the set of `sleep_record` rows, $\bot$ the null wake time, and
 $r.s$ / $r.w$ the sleep / wake timestamps of a row:
 
 $$
-\operatorname{open}(u) = \{\, r \in R \mid r.\text{user} = u \land r.\text{wake} = \bot \,\}
+open(u) = \{\, r \in R \mid r.\text{user} = u \land r.\text{wake} = \bot \,\}
 $$
 
 $$
-\operatorname{phase}(u) = \text{SLEEPING} \iff \operatorname{open}(u) \neq \varnothing
+phase(u) = \text{SLEEPING} \iff open(u) \neq \varnothing
 $$
 
 $$
-\operatorname{duration}(r) = r.\text{wake} - r.\text{sleep}
+duration(r) = r.\text{wake} - r.\text{sleep}
 $$
 
 ### State migration
@@ -139,15 +139,15 @@ $$
 ### Safety invariants
 
 $$
-S_1 \text{ unique open interval:}\quad \forall u.\ |\operatorname{open}(u)| \le 1
+S_1 \text{ unique open interval:}\quad \forall u.\ |open(u)| \le 1
 $$
 
 $$
-S_2 \text{ closure consistency:}\quad r.w \neq \bot \implies \operatorname{duration}(r) = r.w - r.s \ge 0
+S_2 \text{ closure consistency:}\quad r.w \neq \bot \implies duration(r) = r.w - r.s \ge 0
 $$
 
 $$
-S_3 \text{ state consistency:}\quad \operatorname{phase}(u) = \text{SLEEPING} \iff \exists r \in R.\ r.\text{user} = u \land r.\text{wake} = \bot
+S_3 \text{ state consistency:}\quad phase(u) = \text{SLEEPING} \iff \exists r \in R.\ r.\text{user} = u \land r.\text{wake} = \bot
 $$
 
 $$
@@ -157,11 +157,11 @@ $$
 ### Liveness
 
 $$
-L_1 \text{ good-night opens:}\quad \text{EVENING} \times \text{AWAKE}\ \text{accepted} \implies \Diamond\, \operatorname{open}(u) \neq \varnothing
+L_1 \text{ good-night opens:}\quad \text{EVENING} \times \text{AWAKE}\ \text{accepted} \implies \Diamond\, open(u) \neq \varnothing
 $$
 
 $$
-L_2 \text{ good-morning closes:}\quad \text{MORNING} \times \text{SLEEPING}\ \text{accepted} \implies \Diamond\, \bigl(\operatorname{open}(u) = \varnothing \land \operatorname{duration}(r)\ \text{written}\bigr)
+L_2 \text{ good-morning closes:}\quad \text{MORNING} \times \text{SLEEPING}\ \text{accepted} \implies \Diamond\, \bigl(open(u) = \varnothing \land duration(r)\ \text{written}\bigr)
 $$
 
 ### Proof sketches
@@ -169,25 +169,25 @@ $$
 **S1 — induction on traces.** The base is trivial, and the inductive step is:
 
 $$
-\forall t.\ \Bigl(|\operatorname{open}_t(u)| \le 1 \implies |\operatorname{open}_{t+1}(u)| \le 1\Bigr)
+\forall t.\ \Bigl(|open_t(u)| \le 1 \implies |open_{t+1}(u)| \le 1\Bigr)
 $$
 
 `OPEN_RECORD` is only emitted in state `AWAKE`, where
-$\operatorname{open}(u) = \varnothing$; the interpreter then performs a
-transactional `findOpen → create` and returns $\text{Left}(\text{OPEN\_EXISTS})$
-whenever a row already exists, so the step cannot produce $|\operatorname{open}(u)| > 1$.
+$open(u) = \varnothing$; the interpreter then performs a
+transactional `findOpen → create` and returns `Left(OPEN_EXISTS)`
+whenever a row already exists, so the step cannot produce $|open(u)| > 1$.
 
 **S2 — conditional close.** `CLOSE_RECORD` writes exactly once:
 
 $$
-\Delta r = \bigl[\, r.\text{id} = k \land r.\text{wake} = \bot \,\bigr]\,(r.\text{wake} \mapsto t,\ \operatorname{duration} \mapsto t - r.\text{sleep})
+\Delta r = \bigl[\, r.\text{id} = k \land r.\text{wake} = \bot \,\bigr]\,(r.\text{wake} \mapsto t,\ duration \mapsto t - r.\text{sleep})
 $$
 
 so `wake` can never be overwritten and duration is always derived from the
 same stored pair $(r.s, r.w)$.
 
 **S3 — state is derived, not stored.** Since
-$\operatorname{phase}(u) \iff \operatorname{open}(u) \neq \varnothing$ is the
+$phase(u) \iff open(u) \neq \varnothing$ is the
 only definition, storage and state cannot diverge by construction.
 
 **S4 — non-overlap.** New `OPEN_RECORD` is only emitted after the previous
@@ -199,7 +199,7 @@ $$
 
 **L1 / L2.** Read directly from $\delta$; the effect interpreter in
 `src/index.ts` executes exactly the effects returned by `transition`, so the
-next state of $\operatorname{open}(u)$ is the one predicted by $\delta$.
+next state of $open(u)$ is the one predicted by $\delta$.
 
 ### Test mapping
 
